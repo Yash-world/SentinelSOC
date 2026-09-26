@@ -417,15 +417,17 @@ Then open `http://127.0.0.1:5000`, register an account, log in, and either submi
 
 
 ### 18.4 Dashboard
-<img width="1920" height="1080" alt="Screenshot (338)" src="https://github.com/user-attachments/assets/9a4136ab-36ef-4ebc-b1f1-6d908efaa5e8" />
-<img width="1920" height="1080" alt="Screenshot (339)" src="https://github.com/user-attachments/assets/1a75fb90-49b5-4dbe-b8b1-d78d3ce9be85" />
-<img width="1920" height="1080" alt="Screenshot (340)" src="https://github.com/user-attachments/assets/00d2187f-53e8-4022-91e0-6aaadf681e8a" />
+<img width="1920" height="712" alt="Screenshot (338)" src="https://github.com/user-attachments/assets/a7e94ee4-7f4f-4c8f-ac7f-d886c2d3bb38" />
+<img width="1920" height="858" alt="Screenshot (339)" src="https://github.com/user-attachments/assets/9ac02fb3-e284-4dd0-b306-bfc577dac7e7" />
+<img width="1920" height="972" alt="Screenshot (340)" src="https://github.com/user-attachments/assets/18b7dbce-df7b-4de7-9f2e-37170e72300e" />
+
+
 
 
 
 ### 18.5 PDF Ticket
+<img width="984" height="1080" alt="Screenshot (343)" src="https://github.com/user-attachments/assets/bd3bcd86-d8bd-4de9-ad7f-8a50d777fa66" />
 
-<img width="1920" height="1080" alt="Screenshot (343)" src="https://github.com/user-attachments/assets/cfde7092-ae65-48cc-a91c-d177cc515da2" />
 
 
 ## 19. Project File Map
