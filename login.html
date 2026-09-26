@@ -1,0 +1,745 @@
+```html
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Mini SOC - Login</title>
+
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        html,
+        body {
+            width: 100%;
+            min-height: 100%;
+        }
+
+        body {
+            min-height: 100vh;
+            font-family: Arial, Helvetica, sans-serif;
+            background:
+                radial-gradient(
+                    circle at 15% 20%,
+                    rgba(0, 200, 255, 0.12),
+                    transparent 35%
+                ),
+                radial-gradient(
+                    circle at 85% 80%,
+                    rgba(0, 120, 255, 0.10),
+                    transparent 35%
+                ),
+                linear-gradient(
+                    135deg,
+                    #050b14,
+                    #091827,
+                    #050c15
+                );
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 30px;
+        }
+
+        /* =========================
+           MAIN CONTAINER
+        ========================= */
+
+        .login-container {
+            width: 100%;
+            max-width: 1100px;
+            min-height: 650px;
+            display: grid;
+            grid-template-columns: 1.1fr 0.9fr;
+            background: #091727;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 22px;
+            overflow: hidden;
+            box-shadow: 0 30px 80px rgba(0, 0, 0, 0.55);
+        }
+
+        /* =========================
+           LEFT PANEL
+        ========================= */
+
+        .visual {
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            padding: 70px;
+            color: white;
+            background:
+                radial-gradient(
+                    circle at 50% 40%,
+                    rgba(0, 200, 255, 0.13),
+                    transparent 55%
+                );
+            overflow: hidden;
+        }
+
+        .visual::before {
+            content: "";
+            position: absolute;
+            width: 350px;
+            height: 350px;
+            top: -150px;
+            left: -150px;
+            border-radius: 50%;
+            border: 1px solid rgba(0, 200, 255, 0.08);
+        }
+
+        .visual::after {
+            content: "";
+            position: absolute;
+            width: 300px;
+            height: 300px;
+            right: -130px;
+            bottom: -130px;
+            border-radius: 50%;
+            border: 1px solid rgba(0, 200, 255, 0.06);
+        }
+
+        .visual-content {
+            position: relative;
+            z-index: 2;
+            max-width: 500px;
+        }
+
+        /* =========================
+           SHIELD
+        ========================= */
+
+        .shield {
+            width: 120px;
+            height: 120px;
+            margin-bottom: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            font-size: 60px;
+            background: rgba(0, 180, 255, 0.08);
+            border: 1px solid rgba(0, 200, 255, 0.35);
+            box-shadow: 0 0 60px rgba(0, 180, 255, 0.15);
+        }
+
+        /* =========================
+           TITLE
+        ========================= */
+
+        .visual h1 {
+            font-size: 46px;
+            line-height: 1.1;
+            font-weight: 700;
+            margin-bottom: 18px;
+            letter-spacing: -1px;
+        }
+
+        .visual h1 span {
+            color: #35c8ff;
+        }
+
+        .visual-description {
+            max-width: 480px;
+            color: #9fb4c9;
+            font-size: 15px;
+            line-height: 1.8;
+        }
+
+        /* =========================
+           FEATURES
+        ========================= */
+
+        .features {
+            margin-top: 35px;
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+        }
+
+        .feature {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            color: #b7c7d8;
+            font-size: 14px;
+        }
+
+        .feature-icon {
+            flex: 0 0 30px;
+            width: 30px;
+            height: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 8px;
+            background: rgba(0, 200, 255, 0.08);
+            border: 1px solid rgba(0, 200, 255, 0.18);
+            color: #35c8ff;
+            font-weight: bold;
+        }
+
+        /* =========================
+           RIGHT LOGIN PANEL
+        ========================= */
+
+        .login {
+            background: #ffffff;
+            color: #142033;
+            padding: 60px 55px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+
+        .login-content {
+            width: 100%;
+            max-width: 390px;
+            margin: 0 auto;
+        }
+
+        .login h2 {
+            font-size: 32px;
+            line-height: 1.2;
+            margin-bottom: 10px;
+            color: #142033;
+        }
+
+        .login-description {
+            margin-bottom: 30px;
+            color: #718096;
+            font-size: 14px;
+            line-height: 1.6;
+        }
+
+        /* =========================
+           FLASH MESSAGE
+        ========================= */
+
+        .flash-message {
+            width: 100%;
+            margin-bottom: 20px;
+            padding: 12px 14px;
+            border-radius: 9px;
+            background: #fff1f2;
+            border: 1px solid #fecdd3;
+            color: #be123c;
+            font-size: 13px;
+            line-height: 1.5;
+        }
+
+        .flash-message.success {
+            background: #ecfdf5;
+            border-color: #a7f3d0;
+            color: #047857;
+        }
+
+        .flash-message.error {
+            background: #fff1f2;
+            border-color: #fecdd3;
+            color: #be123c;
+        }
+
+        /* =========================
+           FORM
+        ========================= */
+
+        .login-form {
+            width: 100%;
+        }
+
+        .form-group {
+            width: 100%;
+            margin-bottom: 18px;
+        }
+
+        .form-label {
+            display: block;
+            margin-bottom: 8px;
+            color: #27364b;
+            font-size: 13px;
+            font-weight: 600;
+        }
+
+        .input-wrapper {
+            position: relative;
+            width: 100%;
+        }
+
+        .form-input {
+            width: 100%;
+            height: 48px;
+            padding: 0 15px;
+            border: 1px solid #d9dee7;
+            border-radius: 10px;
+            outline: none;
+            background: #ffffff;
+            color: #172033;
+            font-family: inherit;
+            font-size: 14px;
+            transition: 0.2s ease;
+        }
+
+        .form-input:focus {
+            border-color: #4285f4;
+            box-shadow: 0 0 0 3px rgba(66, 133, 244, 0.12);
+        }
+
+        .form-input::placeholder {
+            color: #a0a9b8;
+        }
+
+        .password-input {
+            padding-right: 50px;
+        }
+
+        /* =========================
+           PASSWORD BUTTON
+        ========================= */
+
+        .password-toggle {
+            position: absolute;
+            top: 50%;
+            right: 12px;
+            transform: translateY(-50%);
+            width: 35px;
+            height: 35px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: none;
+            background: transparent;
+            color: #718096;
+            cursor: pointer;
+            font-size: 16px;
+        }
+
+        .password-toggle:hover {
+            color: #142033;
+        }
+
+        /* =========================
+           LOGIN BUTTON
+        ========================= */
+
+        .login-button {
+            width: 100%;
+            height: 48px;
+            margin-top: 5px;
+            border: none;
+            border-radius: 10px;
+            background:
+                linear-gradient(
+                    135deg,
+                    #142033,
+                    #263b57
+                );
+            color: white;
+            font-family: inherit;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: 0.2s ease;
+        }
+
+        .login-button:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 8px 20px rgba(20, 32, 51, 0.20);
+        }
+
+        .login-button:active {
+            transform: translateY(0);
+        }
+
+        /* =========================
+           REGISTER
+        ========================= */
+
+        .register-box {
+            margin-top: 22px;
+            text-align: center;
+            color: #718096;
+            font-size: 13px;
+        }
+
+        .register-link {
+            margin-left: 5px;
+            color: #2563eb;
+            text-decoration: none;
+            font-weight: 700;
+        }
+
+        .register-link:hover {
+            text-decoration: underline;
+        }
+
+        /* =========================
+           DIVIDER
+        ========================= */
+
+        .divider {
+            width: 100%;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin: 25px 0;
+            color: #9aa5b5;
+            font-size: 11px;
+            text-align: center;
+            letter-spacing: 0.5px;
+        }
+
+        .divider::before,
+        .divider::after {
+            content: "";
+            flex: 1;
+            height: 1px;
+            background: #e2e6ec;
+        }
+
+        /* =========================
+           SECURITY NOTE
+        ========================= */
+
+        .security-note {
+            text-align: center;
+            color: #8a94a6;
+            font-size: 12px;
+            line-height: 1.6;
+        }
+
+        /* =========================
+           TABLET
+        ========================= */
+
+        @media (max-width: 850px) {
+            body {
+                padding: 20px;
+            }
+
+            .login-container {
+                grid-template-columns: 1fr;
+                max-width: 520px;
+            }
+
+            .visual {
+                min-height: 400px;
+                padding: 45px;
+            }
+
+            .login {
+                padding: 50px 40px;
+            }
+        }
+
+        /* =========================
+           MOBILE
+        ========================= */
+
+        @media (max-width: 500px) {
+            body {
+                padding: 12px;
+            }
+
+            .login-container {
+                border-radius: 16px;
+            }
+
+            .visual {
+                min-height: auto;
+                padding: 35px 25px;
+            }
+
+            .shield {
+                width: 90px;
+                height: 90px;
+                margin-bottom: 22px;
+                font-size: 45px;
+            }
+
+            .visual h1 {
+                font-size: 34px;
+            }
+
+            .visual-description {
+                font-size: 14px;
+            }
+
+            .login {
+                padding: 40px 25px;
+            }
+
+            .login h2 {
+                font-size: 28px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+<div class="login-container">
+
+    <!-- LEFT PANEL -->
+    <section class="visual">
+        <div class="visual-content">
+
+            <div class="shield">
+                🛡️
+            </div>
+
+            <h1>
+                Mini <span>SOC</span>
+            </h1>
+
+            <p class="visual-description">
+                Monitor security events, detect threats,
+                track indicators of compromise and manage
+                SOC incidents from one secure dashboard.
+            </p>
+
+            <div class="features">
+
+                <div class="feature">
+                    <div class="feature-icon">✓</div>
+                    <span>
+                        Real-time security event monitoring
+                    </span>
+                </div>
+
+                <div class="feature">
+                    <div class="feature-icon">✓</div>
+                    <span>
+                        IOC detection and threat intelligence
+                    </span>
+                </div>
+
+                <div class="feature">
+                    <div class="feature-icon">✓</div>
+                    <span>
+                        Automated security alert analysis
+                    </span>
+                </div>
+
+                <div class="feature">
+                    <div class="feature-icon">✓</div>
+                    <span>
+                        SOC incident and ticket management
+                    </span>
+                </div>
+
+            </div>
+        </div>
+    </section>
+
+
+    <!-- RIGHT LOGIN PANEL -->
+    <section class="login">
+
+        <div class="login-content">
+
+            <h2>
+                Welcome back
+            </h2>
+
+            <p class="login-description">
+                Sign in to access your Mini SOC
+                security operations center.
+            </p>
+
+
+            <!-- FLASH MESSAGES -->
+            {% with messages = get_flashed_messages(with_categories=true) %}
+
+                {% if messages %}
+
+                    {% for category, message in messages %}
+
+                        <div class="flash-message {{ category }}">
+                            {{ message }}
+                        </div>
+
+                    {% endfor %}
+
+                {% endif %}
+
+            {% endwith %}
+
+
+            <!-- LOGIN FORM -->
+            <form
+                method="POST"
+                action="{{ url_for('auth.login_user') }}"
+                class="login-form"
+            >
+
+                <!-- CSRF PROTECTION -->
+                <input
+                    type="hidden"
+                    name="csrf_token"
+                    value="{{ csrf_token() }}"
+                >
+
+
+                <!-- EMAIL -->
+                <div class="form-group">
+
+                    <label
+                        class="form-label"
+                        for="email"
+                    >
+                        Email address
+                    </label>
+
+                    <input
+                        type="email"
+                        id="email"
+                        name="email"
+                        class="form-input"
+                        placeholder="you@example.com"
+                        autocomplete="email"
+                        required
+                    >
+
+                </div>
+
+
+                <!-- PASSWORD -->
+                <div class="form-group">
+
+                    <label
+                        class="form-label"
+                        for="password"
+                    >
+                        Password
+                    </label>
+
+                    <div class="input-wrapper">
+
+                        <input
+                            type="password"
+                            id="password"
+                            name="password"
+                            class="form-input password-input"
+                            placeholder="Enter your password"
+                            autocomplete="current-password"
+                            minlength="8"
+                            required
+                        >
+
+                        <button
+                            type="button"
+                            class="password-toggle"
+                            id="passwordToggle"
+                            aria-label="Show password"
+                        >
+                            👁
+                        </button>
+
+                    </div>
+
+                </div>
+
+
+                <!-- LOGIN BUTTON -->
+                <button
+                    type="submit"
+                    class="login-button"
+                >
+                    Sign In
+                </button>
+
+            </form>
+
+
+            <!-- REGISTER -->
+            <div class="register-box">
+
+                Don't have an account?
+
+                <a
+                    href="{{ url_for('auth.register') }}"
+                    class="register-link"
+                >
+                    Create Account
+                </a>
+
+            </div>
+
+
+            <!-- DIVIDER -->
+            <div class="divider">
+                SECURE ACCESS
+            </div>
+
+
+            <!-- SECURITY NOTE -->
+            <div class="security-note">
+                🔒 Your security events are private
+                and isolated from other users.
+            </div>
+
+        </div>
+
+    </section>
+
+</div>
+
+
+<!-- PASSWORD TOGGLE SCRIPT -->
+<script>
+
+    const passwordInput =
+        document.getElementById("password");
+
+    const passwordToggle =
+        document.getElementById("passwordToggle");
+
+
+    if (passwordInput && passwordToggle) {
+
+        passwordToggle.addEventListener(
+            "click",
+            function () {
+
+                if (passwordInput.type === "password") {
+
+                    passwordInput.type = "text";
+
+                    passwordToggle.textContent = "🙈";
+
+                    passwordToggle.setAttribute(
+                        "aria-label",
+                        "Hide password"
+                    );
+
+                } else {
+
+                    passwordInput.type = "password";
+
+                    passwordToggle.textContent = "👁";
+
+                    passwordToggle.setAttribute(
+                        "aria-label",
+                        "Show password"
+                    );
+
+                }
+
+            }
+        );
+
+    }
+
+</script>
+
+</body>
+</html>
+

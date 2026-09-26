@@ -1,0 +1,2331 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <!-- CSRF token required by Flask-WTF for PATCH/POST/PUT/DELETE requests -->
+    <meta name="csrf-token" content="{{ csrf_token() }}">
+
+    <title>Mini SOC Dashboard</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+    <style>
+        :root {
+            --bg-0: #050a12;
+            --bg-1: #070d17;
+            --bg-2: #0b1420;
+            --panel: rgba(18, 28, 42, 0.55);
+            --panel-solid: #0d1620;
+            --border: rgba(120, 170, 210, 0.14);
+            --border-strong: rgba(120, 190, 255, 0.28);
+            --text-hi: #eaf2fb;
+            --text-mid: #a9b8cc;
+            --text-low: #6e8098;
+            --cyan: #35f0d0;
+            --cyan-dim: rgba(53, 240, 208, 0.12);
+            --blue: #4ea8ff;
+            --blue-dim: rgba(78, 168, 255, 0.12);
+            --red: #ff4d6d;
+            --red-dim: rgba(255, 77, 109, 0.12);
+            --orange: #ff9f43;
+            --orange-dim: rgba(255, 159, 67, 0.12);
+            --yellow: #ffd166;
+            --yellow-dim: rgba(255, 209, 102, 0.12);
+            --purple: #b18aff;
+            --purple-dim: rgba(177, 138, 255, 0.12);
+            --green: #4dffb0;
+            --green-dim: rgba(77, 255, 176, 0.12);
+            --mono: "JetBrains Mono", "SFMono-Regular", Consolas, monospace;
+            --radius-lg: 16px;
+            --radius-md: 12px;
+            --radius-sm: 8px;
+        }
+
+        html {
+            scrollbar-color: rgba(120,190,255,0.35) transparent;
+            scrollbar-width: thin;
+        }
+
+        ::-webkit-scrollbar {
+            height: 8px;
+            width: 8px;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: rgba(120,190,255,0.25);
+            border-radius: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        body {
+            font-family: "Inter", sans-serif;
+            background:
+                radial-gradient(circle at 12% -10%, rgba(53, 240, 208, 0.10), transparent 40%),
+                radial-gradient(circle at 88% -10%, rgba(78, 168, 255, 0.12), transparent 42%),
+                radial-gradient(circle at 50% 110%, rgba(78, 168, 255, 0.06), transparent 45%),
+                linear-gradient(180deg, var(--bg-0), var(--bg-1) 40%, var(--bg-2));
+            background-attachment: fixed;
+            color: var(--text-hi);
+            min-height: 100vh;
+            position: relative;
+            letter-spacing: 0.1px;
+        }
+
+        body::before {
+            content: "";
+            position: fixed;
+            inset: 0;
+            pointer-events: none;
+            z-index: 0;
+            opacity: 0.35;
+            background-image:
+                linear-gradient(rgba(120,190,255,0.05) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(120,190,255,0.05) 1px, transparent 1px);
+            background-size: 42px 42px;
+            mask-image: radial-gradient(circle at 50% 0%, black, transparent 75%);
+        }
+
+        .container {
+            width: min(1500px, 94%);
+            margin: auto;
+            position: relative;
+            z-index: 1;
+        }
+
+        /* ================= HEADER ================= */
+
+        header {
+            padding: 30px 0 22px;
+            border-bottom: 1px solid var(--border);
+            margin-bottom: 26px;
+            position: relative;
+        }
+
+        header::after {
+            content: "";
+            position: absolute;
+            left: 0;
+            right: 0;
+            bottom: -1px;
+            height: 1px;
+            background: linear-gradient(90deg, var(--cyan), transparent 45%, transparent 55%, var(--blue));
+            opacity: 0.6;
+        }
+
+        .header-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .brand {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+        }
+
+        .brand::before {
+            content: "";
+            width: 40px;
+            height: 40px;
+            flex-shrink: 0;
+            border-radius: 10px;
+            background:
+                linear-gradient(135deg, var(--cyan), var(--blue));
+            box-shadow: 0 0 22px rgba(53, 240, 208, 0.35);
+            -webkit-mask-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='black'><path d='M12 1 3 5v6c0 5.4 3.8 10.4 9 12 5.2-1.6 9-6.6 9-12V5l-9-4zm0 2.2 7 3.1V11c0 4.5-3 8.6-7 9.9-4-1.3-7-5.4-7-9.9V6.3l7-3.1z'/><path d='M11 8h2v5h-2zm0 6h2v2h-2z'/></svg>");
+            mask-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='black'><path d='M12 1 3 5v6c0 5.4 3.8 10.4 9 12 5.2-1.6 9-6.6 9-12V5l-9-4zm0 2.2 7 3.1V11c0 4.5-3 8.6-7 9.9-4-1.3-7-5.4-7-9.9V6.3l7-3.1z'/><path d='M11 8h2v5h-2zm0 6h2v2h-2z'/></svg>");
+            -webkit-mask-repeat: no-repeat;
+            mask-repeat: no-repeat;
+            -webkit-mask-position: center;
+            mask-position: center;
+            -webkit-mask-size: 60%;
+            mask-size: 60%;
+        }
+
+        .brand h1 {
+            font-size: 27px;
+            font-weight: 800;
+            letter-spacing: -0.4px;
+            background: linear-gradient(90deg, var(--text-hi), var(--text-hi) 55%, var(--cyan));
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+        }
+
+        .brand p {
+            color: var(--text-low);
+            margin-top: 6px;
+            font-size: 12.5px;
+            font-family: var(--mono);
+            letter-spacing: 0.2px;
+        }
+
+        .online {
+            display: flex;
+            align-items: center;
+            gap: 9px;
+            padding: 10px 16px;
+            border-radius: 999px;
+            background: var(--green-dim);
+            border: 1px solid rgba(77, 255, 176, 0.3);
+            color: var(--green);
+            font-size: 12.5px;
+            font-weight: 600;
+            font-family: var(--mono);
+            box-shadow: 0 0 18px rgba(77, 255, 176, 0.08);
+        }
+
+        .online-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--green);
+            box-shadow: 0 0 10px var(--green), 0 0 20px rgba(77,255,176,0.6);
+            animation: pulse-dot 1.8s ease-in-out infinite;
+        }
+
+        @keyframes pulse-dot {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.55; transform: scale(0.85); }
+        }
+
+        /* ================= NAV ================= */
+
+        .nav {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-bottom: 26px;
+        }
+
+        .nav a,
+        .nav button {
+            text-decoration: none;
+            color: var(--text-mid);
+            background: rgba(255,255,255,0.03);
+            border: 1px solid var(--border);
+            padding: 10px 16px;
+            border-radius: var(--radius-sm);
+            cursor: pointer;
+            font-family: inherit;
+            font-size: 12.5px;
+            font-weight: 500;
+            transition: all 0.2s ease;
+            position: relative;
+        }
+
+        .nav a:hover,
+        .nav button:hover {
+            background: var(--cyan-dim);
+            border-color: var(--border-strong);
+            color: var(--text-hi);
+            box-shadow: 0 0 14px rgba(53, 240, 208, 0.12);
+            transform: translateY(-1px);
+        }
+
+        /* ================= CARDS ================= */
+
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 14px;
+            margin-bottom: 26px;
+        }
+
+        .stat-card {
+            padding: 20px 22px;
+            border-radius: var(--radius-lg);
+            background: linear-gradient(160deg, rgba(255,255,255,0.04), rgba(255,255,255,0.015));
+            border: 1px solid var(--border);
+            backdrop-filter: blur(12px);
+            position: relative;
+            overflow: hidden;
+            transition: border-color 0.2s ease, transform 0.2s ease;
+        }
+
+        .stat-card::before {
+            content: "";
+            position: absolute;
+            top: 0; left: 0; right: 0;
+            height: 2px;
+            background: linear-gradient(90deg, var(--cyan), var(--blue));
+            opacity: 0.7;
+        }
+
+        .stat-card:hover {
+            border-color: var(--border-strong);
+            transform: translateY(-2px);
+        }
+
+        .stat-label {
+            color: var(--text-low);
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            font-weight: 600;
+        }
+
+        .stat-value {
+            font-size: 30px;
+            font-weight: 800;
+            margin-top: 10px;
+            font-family: var(--mono);
+        }
+
+        .critical {
+            color: var(--red);
+            text-shadow: 0 0 18px rgba(255, 77, 109, 0.35);
+        }
+
+        .high {
+            color: var(--orange);
+            text-shadow: 0 0 18px rgba(255, 159, 67, 0.3);
+        }
+
+        .medium {
+            color: var(--yellow);
+            text-shadow: 0 0 18px rgba(255, 209, 102, 0.28);
+        }
+
+        .open {
+            color: var(--blue);
+            text-shadow: 0 0 18px rgba(78, 168, 255, 0.3);
+        }
+
+        /* ================= SECTIONS ================= */
+
+        .section {
+            background: linear-gradient(160deg, rgba(255,255,255,0.03), rgba(255,255,255,0.012));
+            border: 1px solid var(--border);
+            border-radius: var(--radius-lg);
+            margin-bottom: 22px;
+            overflow: hidden;
+            backdrop-filter: blur(10px);
+        }
+
+        .section-header {
+            padding: 17px 22px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 15px;
+            background: rgba(255,255,255,0.015);
+        }
+
+        .section-header h2 {
+            font-size: 15.5px;
+            font-weight: 700;
+            letter-spacing: 0.2px;
+            display: flex;
+            align-items: center;
+            gap: 9px;
+        }
+
+        .section-header h2::before {
+            content: "";
+            width: 7px;
+            height: 7px;
+            border-radius: 2px;
+            background: var(--cyan);
+            box-shadow: 0 0 8px var(--cyan);
+            transform: rotate(45deg);
+        }
+
+        .section-header span {
+            color: var(--text-low);
+            font-size: 11px;
+            font-family: var(--mono);
+        }
+
+        .section-body {
+            padding: 20px 22px;
+        }
+
+        /* ================= TABLE ================= */
+
+        .table-wrapper {
+            overflow-x: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            min-width: 750px;
+        }
+
+        th {
+            text-align: left;
+            color: var(--text-low);
+            font-size: 10.5px;
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+            font-weight: 700;
+            padding: 11px 12px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        td {
+            padding: 13px 12px;
+            font-size: 12.5px;
+            color: var(--text-mid);
+            border-bottom: 1px solid rgba(255,255,255,0.04);
+            font-family: var(--mono);
+        }
+
+        tr:last-child td {
+            border-bottom: none;
+        }
+
+        tr:hover td {
+            background: rgba(78, 168, 255, 0.045);
+            color: var(--text-hi);
+        }
+
+        /* ================= BADGES ================= */
+
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            padding: 5px 10px;
+            border-radius: 999px;
+            font-size: 9.5px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.6px;
+            font-family: var(--mono);
+        }
+
+        .badge-critical {
+            color: #ff88a0;
+            background: var(--red-dim);
+            border: 1px solid rgba(255, 77, 109, 0.3);
+            box-shadow: 0 0 10px rgba(255, 77, 109, 0.15);
+        }
+
+        .badge-high {
+            color: #ffbd85;
+            background: var(--orange-dim);
+            border: 1px solid rgba(255, 159, 67, 0.3);
+        }
+
+        .badge-medium {
+            color: #ffe08a;
+            background: var(--yellow-dim);
+            border: 1px solid rgba(255, 209, 102, 0.3);
+        }
+
+        .badge-low {
+            color: #8fdcff;
+            background: var(--blue-dim);
+            border: 1px solid rgba(78, 168, 255, 0.3);
+        }
+
+        .badge-open {
+            color: #8fc4ff;
+            background: var(--blue-dim);
+            border: 1px solid rgba(78, 168, 255, 0.25);
+        }
+
+        .badge-progress {
+            color: #cbb0ff;
+            background: var(--purple-dim);
+            border: 1px solid rgba(177, 138, 255, 0.28);
+        }
+
+        .badge-resolved {
+            color: #8ff5c6;
+            background: var(--green-dim);
+            border: 1px solid rgba(77, 255, 176, 0.28);
+        }
+
+        .badge-closed {
+            color: #99a5b8;
+            background: rgba(130, 140, 155, 0.1);
+            border: 1px solid rgba(130, 140, 155, 0.22);
+        }
+
+        /* ================= BUTTONS ================= */
+
+        .ticket-action {
+            border: 1px solid var(--border);
+            background: rgba(255,255,255,0.03);
+            color: var(--text-mid);
+            padding: 7px 11px;
+            border-radius: var(--radius-sm);
+            cursor: pointer;
+            font-size: 10.5px;
+            font-weight: 600;
+            font-family: var(--mono);
+            margin-right: 6px;
+            transition: all 0.2s ease;
+        }
+
+        .ticket-action:hover {
+            background: var(--cyan-dim);
+            border-color: var(--border-strong);
+            color: var(--text-hi);
+        }
+
+        .pdf-btn {
+            color: #ff9c9c;
+        }
+
+        .pdf-btn:hover {
+            background: var(--red-dim);
+            border-color: rgba(255, 77, 109, 0.3);
+            color: #ffb3b3;
+        }
+
+        select {
+            background: var(--panel-solid);
+            color: var(--text-hi);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            padding: 7px 10px;
+            font-size: 10.5px;
+            font-family: var(--mono);
+            outline: none;
+            cursor: pointer;
+        }
+
+        select:focus,
+        select:hover {
+            border-color: var(--border-strong);
+        }
+
+        /* ================= GRID ================= */
+
+        .two-column {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 22px;
+        }
+
+        /* ================= ANALYTICS ================= */
+
+        .analytics-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+
+        .mini-card {
+            padding: 15px;
+            background: rgba(255,255,255,0.02);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-md);
+            transition: border-color 0.2s ease;
+        }
+
+        .mini-card:hover {
+            border-color: var(--border-strong);
+        }
+
+        .mini-card-label {
+            color: var(--text-low);
+            font-size: 10.5px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            font-weight: 600;
+        }
+
+        .mini-card-value {
+            font-size: 21px;
+            font-weight: 700;
+            margin-top: 7px;
+            font-family: var(--mono);
+            color: var(--cyan);
+        }
+
+        .bar-row {
+            margin-bottom: 14px;
+        }
+
+        .bar-label {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 6px;
+            font-size: 11px;
+            color: var(--text-mid);
+            font-family: var(--mono);
+        }
+
+        .bar {
+            height: 6px;
+            border-radius: 10px;
+            background: rgba(255,255,255,0.05);
+            overflow: hidden;
+        }
+
+        .bar-fill {
+            height: 100%;
+            border-radius: inherit;
+            background: linear-gradient(90deg, var(--blue), var(--cyan));
+            box-shadow: 0 0 10px rgba(78, 168, 255, 0.4);
+            transition: width 0.3s;
+        }
+
+        /* ================= IOC ================= */
+
+        .ioc-grid {
+            display: grid;
+            grid-template-columns: repeat(6, 1fr);
+            gap: 10px;
+        }
+
+        .ioc-card {
+            padding: 15px;
+            border-radius: var(--radius-md);
+            background: rgba(255,255,255,0.02);
+            border: 1px solid var(--border);
+            transition: border-color 0.2s ease, transform 0.2s ease;
+        }
+
+        .ioc-card:hover {
+            border-color: var(--border-strong);
+            transform: translateY(-1px);
+        }
+
+        .ioc-card .label {
+            color: var(--text-low);
+            font-size: 9.5px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            font-weight: 600;
+        }
+
+        .ioc-card .value {
+            font-size: 20px;
+            font-weight: 700;
+            margin-top: 6px;
+            font-family: var(--mono);
+            color: var(--text-hi);
+        }
+
+        /* ================= EVENTS ================= */
+
+        .events-list {
+            display: flex;
+            flex-direction: column;
+            gap: 9px;
+        }
+
+        .event-item {
+            padding: 13px 14px;
+            background: rgba(255,255,255,0.02);
+            border: 1px solid var(--border);
+            border-left: 2px solid var(--cyan);
+            border-radius: var(--radius-sm);
+            transition: border-color 0.2s ease, background 0.2s ease;
+        }
+
+        .event-item:hover {
+            background: rgba(53, 240, 208, 0.035);
+        }
+
+        .event-title {
+            font-size: 12.5px;
+            font-weight: 600;
+            margin-bottom: 5px;
+            color: var(--text-hi);
+        }
+
+        .event-meta {
+            color: var(--text-low);
+            font-size: 10.5px;
+            font-family: var(--mono);
+        }
+
+        /* ================= EMPTY / ERROR ================= */
+
+        .empty {
+            padding: 30px;
+            text-align: center;
+            color: var(--text-low);
+            font-size: 12.5px;
+            font-family: var(--mono);
+        }
+
+        .error {
+            color: #ff7373;
+        }
+
+        .loading {
+            color: var(--text-low);
+            font-size: 12.5px;
+            padding: 15px 0;
+            font-family: var(--mono);
+        }
+
+        /* ================= FOOTER ================= */
+
+        footer {
+            text-align: center;
+            color: var(--text-low);
+            font-size: 10.5px;
+            font-family: var(--mono);
+            padding: 26px 0 36px;
+            letter-spacing: 0.3px;
+        }
+
+        /* ================= RESPONSIVE ================= */
+
+        @media (max-width: 1100px) {
+            .stats {
+                grid-template-columns: repeat(3, 1fr);
+            }
+
+            .ioc-grid {
+                grid-template-columns: repeat(3, 1fr);
+            }
+
+            .analytics-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        @media (max-width: 800px) {
+            .two-column {
+                grid-template-columns: 1fr;
+            }
+
+            .stats {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .header-row {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+        }
+
+        @media (max-width: 600px) {
+            .container {
+                width: 92%;
+            }
+
+            .stats {
+                grid-template-columns: 1fr;
+            }
+
+            .ioc-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .analytics-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .brand h1 {
+                font-size: 24px;
+            }
+        }
+
+        @media (max-width: 500px) {
+            .ioc-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+    </style>
+</head>
+
+<body>
+
+<div class="container">
+
+    <!-- ================= HEADER ================= -->
+
+    <header>
+        <div class="header-row">
+
+            <div class="brand">
+                <h1>Mini SOC Dashboard</h1>
+                <p>
+                    Security Operations Center • Event Monitoring •
+                    Log Analysis • IOC Intelligence
+                </p>
+            </div>
+
+            <div class="online">
+                <span class="online-dot"></span>
+                Detection Engine Online
+            </div>
+
+        </div>
+    </header>
+
+    <!-- ================= NAVIGATION ================= -->
+
+    <nav class="nav">
+
+        <a href="/">
+            + Add Security Event
+        </a>
+
+        <button onclick="loadDashboard()">
+            Refresh Dashboard
+        </button>
+
+        <a href="/api/report.csv">
+            Export Alert CSV
+        </a>
+
+        <a href="/logout">
+            Logout
+        </a>
+
+    </nav>
+
+    <!-- ================= SUMMARY ================= -->
+
+    <div class="stats">
+
+        <div class="stat-card">
+            <div class="stat-label">Total Alerts</div>
+            <div class="stat-value" id="totalAlerts">0</div>
+        </div>
+
+        <div class="stat-card">
+            <div class="stat-label">Critical</div>
+            <div class="stat-value critical" id="criticalAlerts">0</div>
+        </div>
+
+        <div class="stat-card">
+            <div class="stat-label">High</div>
+            <div class="stat-value high" id="highAlerts">0</div>
+        </div>
+
+        <div class="stat-card">
+            <div class="stat-label">Medium</div>
+            <div class="stat-value medium" id="mediumAlerts">0</div>
+        </div>
+
+        <div class="stat-card">
+            <div class="stat-label">Open</div>
+            <div class="stat-value open" id="openAlerts">0</div>
+        </div>
+
+    </div>
+
+    <!-- ================= ALERTS ================= -->
+
+    <section class="section">
+
+        <div class="section-header">
+            <h2>Security Alerts</h2>
+            <span id="alertCountText">Loading...</span>
+        </div>
+
+        <div class="section-body">
+
+            <div class="table-wrapper">
+
+                <table>
+
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Title</th>
+                            <th>Severity</th>
+                            <th>Source IP</th>
+                            <th>Rule</th>
+                            <th>Status</th>
+                            <th>Created</th>
+                        </tr>
+                    </thead>
+
+                    <tbody id="alertsTableBody">
+                        <tr>
+                            <td colspan="7" class="loading">
+                                Loading alerts...
+                            </td>
+                        </tr>
+                    </tbody>
+
+                </table>
+
+            </div>
+
+        </div>
+
+    </section>
+
+    <!-- ================= EVENTS + LOG ANALYZER ================= -->
+
+    <div class="two-column">
+
+        <section class="section">
+
+            <div class="section-header">
+                <h2>Security Events</h2>
+                <span>Recent activity</span>
+            </div>
+
+            <div class="section-body">
+
+                <div id="eventsList" class="events-list">
+                    <div class="loading">
+                        Loading events...
+                    </div>
+                </div>
+
+            </div>
+
+        </section>
+
+
+        <section class="section">
+
+            <div class="section-header">
+                <h2>Log Analyzer</h2>
+                <span>Event intelligence</span>
+            </div>
+
+            <div class="section-body">
+
+                <div class="analytics-grid">
+
+                    <div class="mini-card">
+                        <div class="mini-card-label">
+                            Logs Analyzed
+                        </div>
+                        <div class="mini-card-value" id="logsAnalyzed">
+                            0
+                        </div>
+                    </div>
+
+                    <div class="mini-card">
+                        <div class="mini-card-label">
+                            Valid Source IPs
+                        </div>
+                        <div class="mini-card-value" id="validIPs">
+                            0
+                        </div>
+                    </div>
+
+                    <div class="mini-card">
+                        <div class="mini-card-label">
+                            Usernames Found
+                        </div>
+                        <div class="mini-card-value" id="usernamesFound">
+                            0
+                        </div>
+                    </div>
+
+                    <div class="mini-card">
+                        <div class="mini-card-label">
+                            Destination Ports
+                        </div>
+                        <div class="mini-card-value" id="destinationPorts">
+                            0
+                        </div>
+                    </div>
+
+                </div>
+
+                <div id="logAnalysisBars">
+                    <div class="empty">
+                        No log analysis data available.
+                    </div>
+                </div>
+
+            </div>
+
+        </section>
+
+    </div>
+
+    <!-- ================= IOC TRACKER ================= -->
+
+    <section class="section">
+
+        <div class="section-header">
+            <h2>IOC Tracker</h2>
+            <span>Indicators of compromise</span>
+        </div>
+
+        <div class="section-body">
+
+            <div class="ioc-grid">
+
+                <div class="ioc-card">
+                    <div class="label">Total IOC</div>
+                    <div class="value" id="iocTotal">0</div>
+                </div>
+
+                <div class="ioc-card">
+                    <div class="label">IP Address</div>
+                    <div class="value" id="iocIP">0</div>
+                </div>
+
+                <div class="ioc-card">
+                    <div class="label">Domain</div>
+                    <div class="value" id="iocDomain">0</div>
+                </div>
+
+                <div class="ioc-card">
+                    <div class="label">URL</div>
+                    <div class="value" id="iocURL">0</div>
+                </div>
+
+                <div class="ioc-card">
+                    <div class="label">Email</div>
+                    <div class="value" id="iocEmail">0</div>
+                </div>
+
+                <div class="ioc-card">
+                    <div class="label">Hashes</div>
+                    <div class="value" id="iocHash">0</div>
+                </div>
+
+            </div>
+
+        </div>
+
+    </section>
+
+    <!-- ================= IOC TABLE ================= -->
+
+    <section class="section">
+
+        <div class="section-header">
+            <h2>IOC Intelligence</h2>
+            <span>Detected indicators</span>
+        </div>
+
+        <div class="section-body">
+
+            <div class="table-wrapper">
+
+                <table>
+
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Type</th>
+                            <th>Value</th>
+                            <th>Source</th>
+                            <th>Created</th>
+                        </tr>
+                    </thead>
+
+                    <tbody id="iocTableBody">
+
+                        <tr>
+                            <td colspan="5" class="loading">
+                                Loading IOC data...
+                            </td>
+                        </tr>
+
+                    </tbody>
+
+                </table>
+
+            </div>
+
+        </div>
+
+    </section>
+
+    <!-- ================= TICKET QUEUE ================= -->
+
+    <section class="section">
+
+        <div class="section-header">
+            <h2>SOC Ticket Queue</h2>
+            <span>Incident response workflow</span>
+        </div>
+
+        <div class="section-body">
+
+            <div class="table-wrapper">
+
+                <table>
+
+                    <thead>
+                        <tr>
+                            <th>Ticket</th>
+                            <th>Title</th>
+                            <th>Severity</th>
+                            <th>Priority</th>
+                            <th>Status</th>
+                            <th>Assignee</th>
+                            <th>Created</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+
+                    <tbody id="ticketsTableBody">
+
+                        <tr>
+                            <td colspan="8" class="loading">
+                                Loading tickets...
+                            </td>
+                        </tr>
+
+                    </tbody>
+
+                </table>
+
+            </div>
+
+        </div>
+
+    </section>
+
+    <!-- ================= RECENT ALERT DETAILS ================= -->
+
+    <section class="section">
+
+        <div class="section-header">
+            <h2>Recent Alert Details</h2>
+            <span>Latest detections</span>
+        </div>
+
+        <div class="section-body">
+
+            <div class="table-wrapper">
+
+                <table>
+
+                    <thead>
+                        <tr>
+                            <th>Alert</th>
+                            <th>Description</th>
+                            <th>Source IP</th>
+                            <th>Rule</th>
+                            <th>MITRE ID</th>
+                            <th>Severity</th>
+                        </tr>
+                    </thead>
+
+                    <tbody id="alertDetailsBody">
+
+                        <tr>
+                            <td colspan="6" class="loading">
+                                Loading alert details...
+                            </td>
+                        </tr>
+
+                    </tbody>
+
+                </table>
+
+            </div>
+
+        </div>
+
+    </section>
+
+    <footer>
+        Mini SOC • Security Monitoring Dashboard
+    </footer>
+
+</div>
+
+
+<script>
+
+    /* =========================================================
+       HELPERS
+    ========================================================= */
+
+    function escapeHTML(value) {
+
+        if (value === null || value === undefined) {
+            return "";
+        }
+
+        return String(value)
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/"/g, "&quot;")
+            .replace(/'/g, "&#039;");
+    }
+
+
+    function formatDate(value) {
+
+        if (!value) {
+            return "-";
+        }
+
+        try {
+
+            return new Date(value).toLocaleString();
+
+        } catch (error) {
+
+            return escapeHTML(value);
+
+        }
+    }
+
+
+    function severityBadge(severity) {
+
+        const value = String(severity || "LOW").toUpperCase();
+
+        let className = "badge-low";
+
+        if (value === "CRITICAL") {
+            className = "badge-critical";
+        }
+        else if (value === "HIGH") {
+            className = "badge-high";
+        }
+        else if (value === "MEDIUM") {
+            className = "badge-medium";
+        }
+
+        return `
+            <span class="badge ${className}">
+                ${escapeHTML(value)}
+            </span>
+        `;
+    }
+
+
+    function statusBadge(status) {
+
+        const value = String(status || "OPEN")
+            .toUpperCase();
+
+        let className = "badge-open";
+
+        if (value === "IN_PROGRESS") {
+            className = "badge-progress";
+        }
+        else if (value === "RESOLVED") {
+            className = "badge-resolved";
+        }
+        else if (value === "CLOSED") {
+            className = "badge-closed";
+        }
+
+        return `
+            <span class="badge ${className}">
+                ${escapeHTML(value.replace("_", " "))}
+            </span>
+        `;
+    }
+
+
+    async function fetchJSON(url, options = {}) {
+
+        const csrfToken =
+            document.querySelector(
+                'meta[name="csrf-token"]'
+            )?.getAttribute("content");
+
+        const method =
+            String(options.method || "GET").toUpperCase();
+
+        const headers = {
+            ...(options.headers || {})
+        };
+
+        // Flask-WTF expects the CSRF token in this header
+        // for JavaScript state-changing requests.
+        if (
+            csrfToken &&
+            ["POST", "PUT", "PATCH", "DELETE"].includes(method)
+        ) {
+            headers["X-CSRFToken"] = csrfToken;
+        }
+
+        const response = await fetch(
+            url,
+            {
+                ...options,
+                headers: headers
+            }
+        );
+
+        if (!response.ok) {
+
+            let message =
+                `HTTP ${response.status} - ${response.statusText}`;
+
+            try {
+
+                const errorData =
+                    await response.json();
+
+                if (errorData.error) {
+                    message = errorData.error;
+                }
+
+                if (errorData.details) {
+                    message += `: ${errorData.details}`;
+                }
+
+            } catch (parseError) {
+                // Response was not JSON.
+            }
+
+            throw new Error(message);
+        }
+
+        return response.json();
+    }
+
+
+    /* =========================================================
+       SUMMARY
+    ========================================================= */
+
+    async function loadSummary() {
+
+        try {
+
+            const data = await fetchJSON("/api/summary");
+
+            document.getElementById("totalAlerts").textContent =
+                data.total || 0;
+
+            document.getElementById("criticalAlerts").textContent =
+                data.critical || 0;
+
+            document.getElementById("highAlerts").textContent =
+                data.high || 0;
+
+            document.getElementById("mediumAlerts").textContent =
+                data.medium || 0;
+
+            document.getElementById("openAlerts").textContent =
+                data.open || 0;
+
+        } catch (error) {
+
+            console.error("Summary error:", error);
+
+        }
+    }
+
+
+    /* =========================================================
+       ALERTS
+    ========================================================= */
+
+    async function loadAlerts() {
+
+        const tbody =
+            document.getElementById("alertsTableBody");
+
+        const detailBody =
+            document.getElementById("alertDetailsBody");
+
+        try {
+
+            const data = await fetchJSON("/api/alerts");
+
+            const alerts = Array.isArray(data)
+                ? data
+                : (data.alerts || []);
+
+            document.getElementById("alertCountText").textContent =
+                `${alerts.length} alert(s)`;
+
+
+            if (!alerts.length) {
+
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="7" class="empty">
+                            No security alerts found.
+                        </td>
+                    </tr>
+                `;
+
+                detailBody.innerHTML = `
+                    <tr>
+                        <td colspan="6" class="empty">
+                            No alert details available.
+                        </td>
+                    </tr>
+                `;
+
+                return;
+            }
+
+
+            tbody.innerHTML = alerts.map(alert => `
+
+                <tr>
+
+                    <td>
+                        ${escapeHTML(alert.id ?? alert.alert_id ?? "-")}
+                    </td>
+
+                    <td>
+                        ${escapeHTML(
+                            alert.title ||
+                            alert.name ||
+                            "Security Alert"
+                        )}
+                    </td>
+
+                    <td>
+                        ${severityBadge(alert.severity)}
+                    </td>
+
+                    <td>
+                        ${escapeHTML(
+                            alert.source_ip || "-"
+                        )}
+                    </td>
+
+                    <td>
+                        ${escapeHTML(
+                            alert.rule_name || "-"
+                        )}
+                    </td>
+
+                    <td>
+                        ${statusBadge(alert.status)}
+                    </td>
+
+                    <td>
+                        ${formatDate(
+                            alert.created_at ||
+                            alert.timestamp
+                        )}
+                    </td>
+
+                </tr>
+
+            `).join("");
+
+
+            detailBody.innerHTML = alerts
+                .slice(0, 15)
+                .map(alert => `
+
+                <tr>
+
+                    <td>
+                        ${escapeHTML(
+                            alert.title ||
+                            alert.name ||
+                            "Security Alert"
+                        )}
+                    </td>
+
+                    <td>
+                        ${escapeHTML(
+                            alert.description || "-"
+                        )}
+                    </td>
+
+                    <td>
+                        ${escapeHTML(
+                            alert.source_ip || "-"
+                        )}
+                    </td>
+
+                    <td>
+                        ${escapeHTML(
+                            alert.rule_name || "-"
+                        )}
+                    </td>
+
+                    <td>
+                        ${escapeHTML(
+                            alert.mitre_id || "-"
+                        )}
+                    </td>
+
+                    <td>
+                        ${severityBadge(alert.severity)}
+                    </td>
+
+                </tr>
+
+            `).join("");
+
+
+        } catch (error) {
+
+            console.error("Alerts error:", error);
+
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="7" class="empty error">
+                        Failed to load alerts.
+                    </td>
+                </tr>
+            `;
+
+        }
+    }
+
+
+    /* =========================================================
+       EVENTS
+    ========================================================= */
+
+    async function loadEvents() {
+
+        const container =
+            document.getElementById("eventsList");
+
+        try {
+
+            const data = await fetchJSON("/api/events");
+
+            const events = Array.isArray(data)
+                ? data
+                : (data.events || []);
+
+
+            if (!events.length) {
+
+                container.innerHTML = `
+                    <div class="empty">
+                        No security events found.
+                    </div>
+                `;
+
+                analyzeEvents([]);
+
+                return;
+            }
+
+
+            container.innerHTML = events
+                .slice(0, 20)
+                .map(event => `
+
+                <div class="event-item">
+
+                    <div class="event-title">
+
+                        ${escapeHTML(
+                            event.event_type ||
+                            event.type ||
+                            event.title ||
+                            "Security Event"
+                        )}
+
+                    </div>
+
+                    <div class="event-meta">
+
+                        Source:
+                        ${escapeHTML(
+                            event.source_ip ||
+                            event.src_ip ||
+                            "-"
+                        )}
+
+                        &nbsp; • &nbsp;
+
+                        User:
+                        ${escapeHTML(
+                            event.username ||
+                            event.user ||
+                            "-"
+                        )}
+
+                        &nbsp; • &nbsp;
+
+                        ${formatDate(
+                            event.created_at ||
+                            event.timestamp
+                        )}
+
+                    </div>
+
+                </div>
+
+            `).join("");
+
+
+            analyzeEvents(events);
+
+        } catch (error) {
+
+            console.error("Events error:", error);
+
+            container.innerHTML = `
+                <div class="empty error">
+                    Failed to load security events.
+                </div>
+            `;
+
+        }
+    }
+
+
+    /* =========================================================
+       LOG ANALYZER
+    ========================================================= */
+
+    function isValidIP(value) {
+
+        if (!value) {
+            return false;
+        }
+
+        const parts = String(value).split(".");
+
+        if (parts.length !== 4) {
+            return false;
+        }
+
+        return parts.every(part => {
+
+            const n = Number(part);
+
+            return (
+                part !== "" &&
+                Number.isInteger(n) &&
+                n >= 0 &&
+                n <= 255
+            );
+
+        });
+    }
+
+
+    function analyzeEvents(events) {
+
+        const usernames = new Set();
+        const ips = new Set();
+        const ports = new Set();
+        const logSources = {};
+        const eventTypes = {};
+        const suspicious = {};
+
+        const suspiciousWords = [
+            "failed",
+            "attack",
+            "malware",
+            "suspicious",
+            "brute",
+            "unauthorized",
+            "blocked",
+            "denied",
+            "sql",
+            "xss"
+        ];
+
+
+        events.forEach(event => {
+
+            const ip =
+                event.source_ip ||
+                event.src_ip;
+
+            if (isValidIP(ip)) {
+                ips.add(ip);
+            }
+
+
+            const username =
+                event.username ||
+                event.user;
+
+            if (username) {
+                usernames.add(username);
+            }
+
+
+            const port =
+                event.destination_port ||
+                event.dest_port ||
+                event.port;
+
+            if (port) {
+                ports.add(port);
+            }
+
+
+            const source =
+                event.log_source ||
+                event.source ||
+                "Unknown";
+
+            logSources[source] =
+                (logSources[source] || 0) + 1;
+
+
+            const type =
+                event.event_type ||
+                event.type ||
+                "Unknown";
+
+            eventTypes[type] =
+                (eventTypes[type] || 0) + 1;
+
+
+            const text =
+                JSON.stringify(event).toLowerCase();
+
+            suspiciousWords.forEach(word => {
+
+                if (text.includes(word)) {
+
+                    suspicious[word] =
+                        (suspicious[word] || 0) + 1;
+
+                }
+
+            });
+
+        });
+
+
+        document.getElementById("logsAnalyzed").textContent =
+            events.length;
+
+        document.getElementById("validIPs").textContent =
+            ips.size;
+
+        document.getElementById("usernamesFound").textContent =
+            usernames.size;
+
+        document.getElementById("destinationPorts").textContent =
+            ports.size;
+
+
+        const container =
+            document.getElementById("logAnalysisBars");
+
+        container.innerHTML = "";
+
+
+        renderBars(
+            container,
+            "Log Sources",
+            logSources
+        );
+
+        renderBars(
+            container,
+            "Event Types",
+            eventTypes
+        );
+
+        renderBars(
+            container,
+            "Suspicious Keywords",
+            suspicious
+        );
+
+
+        if (!container.innerHTML) {
+
+            container.innerHTML = `
+                <div class="empty">
+                    No analysis data available.
+                </div>
+            `;
+
+        }
+    }
+
+
+    function renderBars(container, title, values) {
+
+        const entries = Object.entries(values)
+            .sort((a, b) => b[1] - a[1])
+            .slice(0, 8);
+
+
+        if (!entries.length) {
+            return;
+        }
+
+
+        const max =
+            Math.max(...entries.map(item => item[1]));
+
+
+        const titleElement =
+            document.createElement("div");
+
+        titleElement.style.margin =
+            "18px 0 10px";
+
+        titleElement.style.fontSize =
+            "12px";
+
+        titleElement.style.color =
+            "#8995a7";
+
+        titleElement.textContent = title;
+
+        container.appendChild(titleElement);
+
+
+        entries.forEach(([label, value]) => {
+
+            const row =
+                document.createElement("div");
+
+            row.className = "bar-row";
+
+
+            const percentage =
+                max > 0
+                    ? (value / max) * 100
+                    : 0;
+
+
+            row.innerHTML = `
+
+                <div class="bar-label">
+
+                    <span>
+                        ${escapeHTML(label)}
+                    </span>
+
+                    <span>
+                        ${value}
+                    </span>
+
+                </div>
+
+                <div class="bar">
+
+                    <div
+                        class="bar-fill"
+                        style="width: ${percentage}%"
+                    ></div>
+
+                </div>
+
+            `;
+
+
+            container.appendChild(row);
+
+        });
+
+    }
+
+
+    /* =========================================================
+       IOC
+    ========================================================= */
+
+    async function loadIOCSummary() {
+
+        try {
+
+            const data =
+                await fetchJSON("/api/iocs/summary");
+
+            // /api/iocs/summary returns a normalized object:
+            // { total, ip, domain, url, email, md5, sha1, sha256 }
+            document.getElementById("iocTotal").textContent =
+                Number(data.total || 0);
+
+            document.getElementById("iocIP").textContent =
+                Number(data.ip || 0);
+
+            document.getElementById("iocDomain").textContent =
+                Number(data.domain || 0);
+
+            document.getElementById("iocURL").textContent =
+                Number(data.url || 0);
+
+            document.getElementById("iocEmail").textContent =
+                Number(data.email || 0);
+
+            document.getElementById("iocHash").textContent =
+                Number(data.md5 || 0) +
+                Number(data.sha1 || 0) +
+                Number(data.sha256 || 0);
+
+        } catch (error) {
+
+            console.error(
+                "IOC summary error:",
+                error
+            );
+
+        }
+    }
+
+
+    async function loadIOCs() {
+
+        const tbody =
+            document.getElementById("iocTableBody");
+
+        try {
+
+            const data =
+                await fetchJSON("/api/iocs");
+
+            const iocs = Array.isArray(data)
+                ? data
+                : (data.iocs || []);
+
+
+            if (!iocs.length) {
+
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="5" class="empty">
+                            No indicators of compromise found.
+                        </td>
+                    </tr>
+                `;
+
+                return;
+            }
+
+
+            tbody.innerHTML = iocs
+                .slice(0, 50)
+                .map(ioc => `
+
+                <tr>
+
+                    <td>
+                        ${escapeHTML(
+                            ioc.ioc_id || ioc.id || "-"
+                        )}
+                    </td>
+
+                    <td>
+                        ${escapeHTML(
+                            ioc.ioc_type || ioc.type || "Unknown"
+                        )}
+                    </td>
+
+                    <td>
+                        ${escapeHTML(
+                            ioc.value || "-"
+                        )}
+                    </td>
+
+                    <td>
+                        ${escapeHTML(
+                            ioc.source || "Local IOC Tracker"
+                        )}
+                    </td>
+
+                    <td>
+                        ${formatDate(
+                            ioc.created_at || ioc.first_seen
+                        )}
+                    </td>
+
+                </tr>
+
+            `).join("");
+
+
+        } catch (error) {
+
+            console.error(
+                "IOC error:",
+                error
+            );
+
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="5" class="empty error">
+                        Failed to load IOC data.
+                    </td>
+                </tr>
+            `;
+
+        }
+    }
+
+
+    /* =========================================================
+       TICKETS
+    ========================================================= */
+
+    function priorityBadge(priority) {
+
+        const value =
+            String(priority || "MEDIUM")
+                .toUpperCase();
+
+        return `
+            <span class="badge badge-${(
+                value === "CRITICAL"
+                    ? "critical"
+                    : value === "HIGH"
+                        ? "high"
+                        : value === "LOW"
+                            ? "low"
+                            : "medium"
+            )}">
+                ${escapeHTML(value)}
+            </span>
+        `;
+    }
+
+
+    function ticketStatusSelect(ticket) {
+
+        const status =
+            String(ticket.status || "OPEN")
+                .toUpperCase();
+
+
+        return `
+
+            <select
+                onchange="updateTicketStatus(
+                    ${ticket.id},
+                    this.value
+                )"
+            >
+
+                <option value="OPEN"
+                    ${status === "OPEN" ? "selected" : ""}>
+                    OPEN
+                </option>
+
+                <option value="IN_PROGRESS"
+                    ${status === "IN_PROGRESS" ? "selected" : ""}>
+                    IN PROGRESS
+                </option>
+
+                <option value="RESOLVED"
+                    ${status === "RESOLVED" ? "selected" : ""}>
+                    RESOLVED
+                </option>
+
+                <option value="CLOSED"
+                    ${status === "CLOSED" ? "selected" : ""}>
+                    CLOSED
+                </option>
+
+            </select>
+
+        `;
+    }
+
+
+    async function updateTicketStatus(ticketId, status) {
+
+        const newStatus =
+            String(status || "").trim().toUpperCase();
+
+        const allowedStatuses = [
+            "OPEN",
+            "IN_PROGRESS",
+            "RESOLVED",
+            "CLOSED"
+        ];
+
+        if (!allowedStatuses.includes(newStatus)) {
+
+            alert(
+                "Invalid ticket status selected."
+            );
+
+            await loadTickets();
+
+            return;
+        }
+
+        try {
+
+            const data =
+                await fetchJSON(
+                    `/api/tickets/${ticketId}`,
+                    {
+                        method: "PATCH",
+
+                        headers: {
+                            "Content-Type":
+                                "application/json"
+                        },
+
+                        body: JSON.stringify({
+                            status: newStatus
+                        })
+                    }
+                );
+
+            if (!data || data.success !== true) {
+
+                throw new Error(
+                    data?.error ||
+                    "Server did not confirm the status update."
+                );
+            }
+
+            await loadTickets();
+            await loadSummary();
+
+        } catch (error) {
+
+            console.error(
+                "Ticket status update failed:",
+                error
+            );
+
+            alert(
+                error.message ||
+                "Failed to update ticket status."
+            );
+
+            // Restore the value actually stored in the database.
+            await loadTickets();
+        }
+    }
+
+
+    function showTicketMessage(ticket) {
+
+        const message = [
+
+            `Ticket: ${ticket.ticket_id || ticket.id || "-"}`,
+
+            `Title: ${ticket.title || "-"}`,
+
+            `Severity: ${ticket.severity || "-"}`,
+
+            `Priority: ${ticket.priority || "-"}`,
+
+            `Status: ${ticket.status || "-"}`,
+
+            `Assignee: ${ticket.assignee || "-"}`,
+
+            `Source IP: ${ticket.source_ip || "-"}`,
+
+            `Rule: ${ticket.rule_name || "-"}`,
+
+            `MITRE: ${ticket.mitre_id || "-"}`,
+
+            `Description: ${ticket.description || "-"}`
+
+        ].join("\n");
+
+
+        alert(message);
+    }
+
+
+    async function loadTickets() {
+
+        const tbody =
+            document.getElementById("ticketsTableBody");
+
+        try {
+
+            const data =
+                await fetchJSON("/api/tickets");
+
+            const tickets = Array.isArray(data)
+                ? data
+                : (data.tickets || []);
+
+
+            if (!tickets.length) {
+
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="8" class="empty">
+                            No SOC tickets found.
+                        </td>
+                    </tr>
+                `;
+
+                return;
+            }
+
+
+            tbody.innerHTML = tickets
+                .map(ticket => `
+
+                <tr>
+
+                    <td>
+                        ${escapeHTML(
+                            ticket.ticket_id ||
+                            ticket.id ||
+                            "-"
+                        )}
+                    </td>
+
+                    <td>
+                        ${escapeHTML(
+                            ticket.title ||
+                            "Security Ticket"
+                        )}
+                    </td>
+
+                    <td>
+                        ${severityBadge(
+                            ticket.severity
+                        )}
+                    </td>
+
+                    <td>
+                        ${priorityBadge(
+                            ticket.priority
+                        )}
+                    </td>
+
+                    <td>
+                        ${ticketStatusSelect(ticket)}
+                    </td>
+
+                    <td>
+                        ${escapeHTML(
+                            ticket.assignee ||
+                            "SOC Analyst"
+                        )}
+                    </td>
+
+                    <td>
+                        ${formatDate(
+                            ticket.created_at
+                        )}
+                    </td>
+
+                    <td>
+
+                        <button
+                            class="ticket-action"
+                            onclick="viewTicket(
+                                ${ticket.id}
+                            )"
+                        >
+                            View
+                        </button>
+
+                        <button
+                            class="ticket-action pdf-btn"
+                            onclick="downloadTicketPDF(
+                                ${ticket.id}
+                            )"
+                        >
+                            PDF
+                        </button>
+
+                    </td>
+
+                </tr>
+
+            `).join("");
+
+
+        } catch (error) {
+
+            console.error(
+                "Tickets error:",
+                error
+            );
+
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="8" class="empty error">
+                        Failed to load tickets.
+                    </td>
+                </tr>
+            `;
+
+        }
+    }
+
+
+    async function viewTicket(ticketId) {
+
+        try {
+
+            const ticket =
+                await fetchJSON(
+                    `/api/tickets/${ticketId}`
+                );
+
+            showTicketMessage(ticket);
+
+        } catch (error) {
+
+            console.error(
+                "View ticket error:",
+                error
+            );
+
+            alert(
+                "Failed to load ticket."
+            );
+
+        }
+    }
+
+
+    function downloadTicketPDF(ticketId) {
+
+        window.open(
+            `/api/tickets/${ticketId}/pdf`,
+            "_blank"
+        );
+
+    }
+
+
+    /* =========================================================
+       MAIN DASHBOARD
+    ========================================================= */
+
+    async function loadDashboard() {
+
+        await Promise.allSettled([
+
+            loadSummary(),
+
+            loadAlerts(),
+
+            loadEvents(),
+
+            loadIOCSummary(),
+
+            loadIOCs(),
+
+            loadTickets()
+
+        ]);
+
+    }
+
+
+    function startDashboard() {
+
+        loadDashboard();
+
+        setInterval(
+            loadDashboard,
+            10000
+        );
+
+    }
+
+
+    document.addEventListener(
+        "DOMContentLoaded",
+        startDashboard
+    );
+
+</script>
+
+</body>
+</html>

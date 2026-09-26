@@ -1,0 +1,362 @@
+{
+  "threat_intelligence": {
+    "version": "2.0",
+    "feed_type": "simulated",
+    "last_updated": "2026-09-22T14:20:00Z",
+    "total_indicators": 12
+  },
+
+  "indicators": [
+    {
+      "id": "TI-0001",
+      "type": "ip",
+      "value": "185.220.101.45",
+      "indicator_type": "IPv4",
+      "category": "Command and Control",
+      "threat_type": "C2 Server",
+      "malware_family": "DarkComet",
+      "threat_actor": "Unknown",
+      "severity": "CRITICAL",
+      "confidence": 96,
+      "risk_score": 94,
+      "reputation": "Malicious",
+      "country": "Unknown",
+      "asn": "AS9009",
+      "first_seen": "2026-08-11T09:20:00Z",
+      "last_seen": "2026-09-22T11:45:00Z",
+      "status": "ACTIVE",
+      "mitre_attack": [
+        "T1071.001",
+        "T1059"
+      ],
+      "tags": [
+        "c2",
+        "botnet",
+        "malware",
+        "remote-access"
+      ],
+      "description": "IP associated with suspected command-and-control activity and remote access malware."
+    },
+
+    {
+      "id": "TI-0002",
+      "type": "domain",
+      "value": "secure-login-check[.]com",
+      "indicator_type": "Domain",
+      "category": "Phishing",
+      "threat_type": "Credential Theft",
+      "malware_family": null,
+      "threat_actor": "Unknown",
+      "severity": "HIGH",
+      "confidence": 91,
+      "risk_score": 88,
+      "reputation": "Malicious",
+      "country": "Russia",
+      "first_seen": "2026-09-02T08:15:00Z",
+      "last_seen": "2026-09-21T18:32:00Z",
+      "status": "ACTIVE",
+      "mitre_attack": [
+        "T1566.002",
+        "T1056.002"
+      ],
+      "tags": [
+        "phishing",
+        "credential-theft",
+        "fake-login"
+      ],
+      "description": "Domain observed in phishing campaigns targeting corporate login credentials."
+    },
+
+    {
+      "id": "TI-0003",
+      "type": "hash",
+      "value": "44d88612fea8a8f36de82e1278abb02f",
+      "indicator_type": "MD5",
+      "category": "Malware",
+      "threat_type": "Malicious File",
+      "malware_family": "AgentTesla",
+      "threat_actor": "Unknown",
+      "severity": "CRITICAL",
+      "confidence": 99,
+      "risk_score": 97,
+      "reputation": "Malicious",
+      "first_seen": "2026-07-19T12:10:00Z",
+      "last_seen": "2026-09-20T07:55:00Z",
+      "status": "ACTIVE",
+      "mitre_attack": [
+        "T1059.003",
+        "T1082",
+        "T1555"
+      ],
+      "tags": [
+        "infostealer",
+        "credential-stealing",
+        "malware"
+      ],
+      "description": "File hash associated with an information-stealing malware sample."
+    },
+
+    {
+      "id": "TI-0004",
+      "type": "ip",
+      "value": "103.216.221.17",
+      "indicator_type": "IPv4",
+      "category": "Brute Force",
+      "threat_type": "SSH Attack",
+      "malware_family": null,
+      "threat_actor": "Unknown",
+      "severity": "HIGH",
+      "confidence": 89,
+      "risk_score": 85,
+      "reputation": "Suspicious",
+      "country": "China",
+      "asn": "AS4837",
+      "first_seen": "2026-09-05T03:25:00Z",
+      "last_seen": "2026-09-22T13:10:00Z",
+      "status": "ACTIVE",
+      "mitre_attack": [
+        "T1110.001",
+        "T1021.004"
+      ],
+      "tags": [
+        "brute-force",
+        "ssh",
+        "authentication"
+      ],
+      "description": "Source IP repeatedly observed attempting SSH authentication against multiple systems."
+    },
+
+    {
+      "id": "TI-0005",
+      "type": "domain",
+      "value": "update-microsoft-security[.]net",
+      "indicator_type": "Domain",
+      "category": "Malware Distribution",
+      "threat_type": "Fake Software Update",
+      "malware_family": "SocGholish",
+      "threat_actor": "Unknown",
+      "severity": "HIGH",
+      "confidence": 94,
+      "risk_score": 92,
+      "reputation": "Malicious",
+      "country": "United States",
+      "first_seen": "2026-08-28T14:30:00Z",
+      "last_seen": "2026-09-19T16:42:00Z",
+      "status": "ACTIVE",
+      "mitre_attack": [
+        "T1189",
+        "T1204.002"
+      ],
+      "tags": [
+        "drive-by-download",
+        "fake-update",
+        "malware"
+      ],
+      "description": "Domain associated with fake browser and software update campaigns."
+    },
+
+    {
+      "id": "TI-0006",
+      "type": "hash",
+      "value": "5d41402abc4b2a76b9719d911017c592",
+      "indicator_type": "MD5",
+      "category": "Ransomware",
+      "threat_type": "File Encryption",
+      "malware_family": "LockBit",
+      "threat_actor": "Unknown",
+      "severity": "CRITICAL",
+      "confidence": 97,
+      "risk_score": 98,
+      "reputation": "Malicious",
+      "first_seen": "2026-08-03T10:12:00Z",
+      "last_seen": "2026-09-18T22:30:00Z",
+      "status": "ACTIVE",
+      "mitre_attack": [
+        "T1486",
+        "T1490",
+        "T1562.001"
+      ],
+      "tags": [
+        "ransomware",
+        "encryption",
+        "impact"
+      ],
+      "description": "Hash linked to ransomware activity involving file encryption and recovery inhibition."
+    },
+
+    {
+      "id": "TI-0007",
+      "type": "url",
+      "value": "http://login-verification[.]info/account",
+      "indicator_type": "URL",
+      "category": "Phishing",
+      "threat_type": "Credential Harvesting",
+      "malware_family": null,
+      "threat_actor": "Unknown",
+      "severity": "HIGH",
+      "confidence": 93,
+      "risk_score": 90,
+      "reputation": "Malicious",
+      "first_seen": "2026-09-10T06:40:00Z",
+      "last_seen": "2026-09-22T09:25:00Z",
+      "status": "ACTIVE",
+      "mitre_attack": [
+        "T1566.002",
+        "T1056.002"
+      ],
+      "tags": [
+        "phishing",
+        "credential-harvesting",
+        "login-page"
+      ],
+      "description": "URL used to imitate an authentication portal and collect user credentials."
+    },
+
+    {
+      "id": "TI-0008",
+      "type": "ip",
+      "value": "45.155.205.233",
+      "indicator_type": "IPv4",
+      "category": "Scanning",
+      "threat_type": "Network Reconnaissance",
+      "malware_family": null,
+      "threat_actor": "Unknown",
+      "severity": "MEDIUM",
+      "confidence": 84,
+      "risk_score": 71,
+      "reputation": "Suspicious",
+      "country": "Netherlands",
+      "first_seen": "2026-09-01T04:50:00Z",
+      "last_seen": "2026-09-22T12:05:00Z",
+      "status": "MONITORED",
+      "mitre_attack": [
+        "T1046"
+      ],
+      "tags": [
+        "port-scan",
+        "reconnaissance",
+        "network-scan"
+      ],
+      "description": "IP observed performing repeated network and service discovery scans."
+    },
+
+    {
+      "id": "TI-0009",
+      "type": "domain",
+      "value": "cloud-storage-auth[.]org",
+      "indicator_type": "Domain",
+      "category": "Phishing",
+      "threat_type": "OAuth Token Theft",
+      "malware_family": null,
+      "threat_actor": "Unknown",
+      "severity": "HIGH",
+      "confidence": 90,
+      "risk_score": 87,
+      "reputation": "Malicious",
+      "first_seen": "2026-09-06T11:35:00Z",
+      "last_seen": "2026-09-20T15:18:00Z",
+      "status": "ACTIVE",
+      "mitre_attack": [
+        "T1566.002",
+        "T1528"
+      ],
+      "tags": [
+        "oauth",
+        "token-theft",
+        "phishing",
+        "cloud"
+      ],
+      "description": "Domain associated with phishing pages designed to obtain cloud authentication tokens."
+    },
+
+    {
+      "id": "TI-0010",
+      "type": "hash",
+      "value": "9e107d9d372bb6826bd81d3542a419d6",
+      "indicator_type": "MD5",
+      "category": "Trojan",
+      "threat_type": "Remote Access",
+      "malware_family": "Remcos",
+      "threat_actor": "Unknown",
+      "severity": "HIGH",
+      "confidence": 95,
+      "risk_score": 91,
+      "reputation": "Malicious",
+      "first_seen": "2026-08-21T13:05:00Z",
+      "last_seen": "2026-09-17T19:44:00Z",
+      "status": "ACTIVE",
+      "mitre_attack": [
+        "T1219",
+        "T1059.003",
+        "T1105"
+      ],
+      "tags": [
+        "rat",
+        "remote-access",
+        "trojan"
+      ],
+      "description": "Malicious file associated with remote access trojan activity."
+    },
+
+    {
+      "id": "TI-0011",
+      "type": "ip",
+      "value": "91.240.118.172",
+      "indicator_type": "IPv4",
+      "category": "Botnet",
+      "threat_type": "Botnet C2",
+      "malware_family": "Mirai",
+      "threat_actor": "Unknown",
+      "severity": "HIGH",
+      "confidence": 92,
+      "risk_score": 89,
+      "reputation": "Malicious",
+      "country": "Russia",
+      "first_seen": "2026-08-15T07:20:00Z",
+      "last_seen": "2026-09-21T21:10:00Z",
+      "status": "ACTIVE",
+      "mitre_attack": [
+        "T1071",
+        "T1046"
+      ],
+      "tags": [
+        "iot",
+        "botnet",
+        "c2",
+        "scanning"
+      ],
+      "description": "Infrastructure associated with IoT botnet command-and-control activity."
+    },
+
+    {
+      "id": "TI-0012",
+      "type": "domain",
+      "value": "invoice-document-download[.]com",
+      "indicator_type": "Domain",
+      "category": "Malware Delivery",
+      "threat_type": "Malicious Attachment",
+      "malware_family": "QakBot",
+      "threat_actor": "Unknown",
+      "severity": "CRITICAL",
+      "confidence": 96,
+      "risk_score": 95,
+      "reputation": "Malicious",
+      "country": "Unknown",
+      "first_seen": "2026-08-30T09:45:00Z",
+      "last_seen": "2026-09-22T10:55:00Z",
+      "status": "ACTIVE",
+      "mitre_attack": [
+        "T1566.001",
+        "T1204.002",
+        "T1059.003"
+      ],
+      "tags": [
+        "qakbot",
+        "malware",
+        "email",
+        "attachment"
+      ],
+      "description": "Domain observed in malicious email campaigns delivering malware through invoice-themed documents."
+    }
+  ]
+}
