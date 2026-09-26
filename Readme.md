@@ -403,7 +403,8 @@ Then open `http://127.0.0.1:5000`, register an account, log in, and either submi
 
 ### 18.1 Register Page
 
-*Add screenshot of the Register page here.*
+<img width="1920" height="1080" alt="Screenshot (335)" src="https://github.com/user-attachments/assets/2ac73541-4dcb-46e1-9a06-cc6e57ce705e" />
+
 
 ### 18.2 Login Page
 
