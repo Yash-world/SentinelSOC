@@ -408,23 +408,25 @@ Then open `http://127.0.0.1:5000`, register an account, log in, and either submi
 
 ### 18.2 Login Page
 
-*Add screenshot of the Login page here.*
+<img width="1920" height="1080" alt="Screenshot (334)" src="https://github.com/user-attachments/assets/c5708d59-5e5b-4864-b533-95c40262a824" />
+
 
 ### 18.3 Input / Event Submission Page
 
-*Add screenshot of the Input page where users submit security events or start the live attack simulator.*
+<img width="1920" height="1080" alt="Screenshot (337)" src="https://github.com/user-attachments/assets/2ace16fc-a61b-4bcd-8875-08a7d37aacb0" />
+
 
 ### 18.4 Dashboard
+<img width="1920" height="1080" alt="Screenshot (338)" src="https://github.com/user-attachments/assets/9a4136ab-36ef-4ebc-b1f1-6d908efaa5e8" />
+<img width="1920" height="1080" alt="Screenshot (339)" src="https://github.com/user-attachments/assets/1a75fb90-49b5-4dbe-b8b1-d78d3ce9be85" />
+<img width="1920" height="1080" alt="Screenshot (340)" src="https://github.com/user-attachments/assets/00d2187f-53e8-4022-91e0-6aaadf681e8a" />
 
-*Add screenshot of the SOC Dashboard showing alerts, IOCs, tickets, and statistics.*
 
-### 18.5 Alert / Ticket Details
 
-*Add screenshot showing an alert or generated SOC ticket.*
+### 18.5 PDF Ticket
 
-### 18.6 PDF Ticket
+<img width="1920" height="1080" alt="Screenshot (343)" src="https://github.com/user-attachments/assets/cfde7092-ae65-48cc-a91c-d177cc515da2" />
 
-*Add screenshot showing the generated SOC ticket PDF.*
 
 ## 19. Project File Map
 
