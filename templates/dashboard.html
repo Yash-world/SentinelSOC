@@ -6,6 +6,9 @@
 
     <!-- CSRF token required by Flask-WTF for PATCH/POST/PUT/DELETE requests -->
     <meta name="csrf-token" content="{{ csrf_token() }}">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
 
     <title>Mini SOC Dashboard</title>
 
@@ -1235,6 +1238,8 @@
             String(options.method || "GET").toUpperCase();
 
         const headers = {
+            "Cache-Control": "no-cache, no-store, must-revalidate",
+            "Pragma": "no-cache",
             ...(options.headers || {})
         };
 
@@ -1247,10 +1252,22 @@
             headers["X-CSRFToken"] = csrfToken;
         }
 
+        // Render/browser/proxy caches must never serve an old API response.
+        // Only GET/HEAD requests receive the cache-busting query parameter.
+        let requestURL = url;
+
+        if (method === "GET" || method === "HEAD") {
+            const separator = requestURL.includes("?") ? "&" : "?";
+            requestURL = `${requestURL}${separator}_ts=${Date.now()}`;
+        }
+
         const response = await fetch(
-            url,
+            requestURL,
             {
                 ...options,
+                cache: method === "GET" || method === "HEAD"
+                    ? "no-store"
+                    : (options.cache || "default"),
                 headers: headers
             }
         );
@@ -2287,23 +2304,43 @@
        MAIN DASHBOARD
     ========================================================= */
 
+    let dashboardRefreshRunning = false;
+    let dashboardRefreshTimer = null;
+
     async function loadDashboard() {
 
-        await Promise.allSettled([
+        // Do not start another full refresh while the previous one is still
+        // loading. This avoids race conditions where an older API response
+        // overwrites a newer response.
+        if (dashboardRefreshRunning) {
+            return;
+        }
 
-            loadSummary(),
+        dashboardRefreshRunning = true;
 
-            loadAlerts(),
+        try {
 
-            loadEvents(),
+            await Promise.allSettled([
 
-            loadIOCSummary(),
+                loadSummary(),
 
-            loadIOCs(),
+                loadAlerts(),
 
-            loadTickets()
+                loadEvents(),
 
-        ]);
+                loadIOCSummary(),
+
+                loadIOCs(),
+
+                loadTickets()
+
+            ]);
+
+        } finally {
+
+            dashboardRefreshRunning = false;
+
+        }
 
     }
 
@@ -2312,12 +2349,23 @@
 
         loadDashboard();
 
-        setInterval(
+        if (dashboardRefreshTimer) {
+            clearInterval(dashboardRefreshTimer);
+        }
+
+        dashboardRefreshTimer = setInterval(
             loadDashboard,
             10000
         );
 
     }
+
+
+    // Force a completely fresh dashboard when the browser restores a page
+    // from its back/forward cache.
+    window.addEventListener("pageshow", function () {
+        loadDashboard();
+    });
 
 
     document.addEventListener(
