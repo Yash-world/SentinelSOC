@@ -1129,7 +1129,7 @@
 
         </div>
 
-        <form id="eventForm">
+        <form id="eventForm" autocomplete="off" novalidate>
 
             <div class="form-grid">
 
@@ -1140,7 +1140,7 @@
                         <span class="required">*</span>
                     </label>
 
-                    <select id="event_type" required>
+                    <select id="event_type" name="event_type" autocomplete="off" required>
                         <option value="">Select event type</option>
                         <option value="login">Normal Login</option>
                         <option value="failed_login">Failed Login</option>
@@ -1167,6 +1167,7 @@
                     <input
                         type="text"
                         id="source_ip"
+                        autocomplete="off"
                         placeholder="192.168.1.100"
                         required
                     >
@@ -1226,7 +1227,7 @@
                         <span class="required">*</span>
                     </label>
 
-                    <select id="status" required>
+                    <select id="status" name="status" autocomplete="off" required>
                         <option value="">Select status</option>
                         <option value="success">Success</option>
                         <option value="failed">Failed</option>
@@ -1588,6 +1589,52 @@
 
 
     /* =========================================================
+       FORM RESET / BROWSER RESTORE PROTECTION
+    ========================================================= */
+
+    function resetEventForm() {
+        const form = document.getElementById("eventForm");
+        const preview = document.getElementById("iocPreview");
+        const result = document.getElementById("result");
+
+        if (form) {
+            form.reset();
+
+            // Explicitly clear every user-editable control so that
+            // browser form restoration/autofill cannot repopulate it.
+            form.querySelectorAll("input, select, textarea").forEach(field => {
+                if (field.type === "checkbox" || field.type === "radio") {
+                    field.checked = false;
+                } else {
+                    field.value = "";
+                }
+            });
+        }
+
+        if (preview) {
+            preview.innerHTML =
+                "Type a log message to preview possible IOCs.";
+        }
+
+        if (result) {
+            result.className = "result";
+            result.style.display = "none";
+            result.innerHTML = "";
+        }
+    }
+
+    // Prevent the browser from restoring the previous form state
+    // when the page is opened/reloaded/back-navigated.
+    window.addEventListener("pageshow", function () {
+        resetEventForm();
+    });
+
+    window.addEventListener("load", function () {
+        resetEventForm();
+    });
+
+
+    /* =========================================================
        CLEAR FORM
     ========================================================= */
 
@@ -1595,21 +1642,7 @@
         .getElementById("clearButton")
         .addEventListener("click", function () {
 
-            document
-                .getElementById("eventForm")
-                .reset();
-
-            document
-                .getElementById("iocPreview")
-                .innerHTML =
-                "Type a log message to preview possible IOCs.";
-
-            const result =
-                document.getElementById("result");
-
-            result.className = "result";
-            result.style.display = "none";
-            result.innerHTML = "";
+            resetEventForm();
         });
 
 
@@ -1975,11 +2008,11 @@
                 `;
 
 
+                // Clear all submitted values before leaving the page.
+                resetEventForm();
+
                 setTimeout(function () {
-
-                    window.location.href =
-                        "/dashboard";
-
+                    window.location.replace("/dashboard");
                 }, 1800);
 
 
