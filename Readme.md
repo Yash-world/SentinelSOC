@@ -2,7 +2,7 @@
 
 ## 1. Overview
 
-Mini SOC is a self-contained, single-server **Security Operations Center (SOC) simulator** built in **Flask + SQLite**. Each registered user gets their own isolated workspace: they submit security events (manually, or via the built-in live attack simulator), the system parses/enriches/correlates them, raises alerts, opens tickets, sends outbound notifications, and shows everything on a dashboard.
+SentinelSOC is a self-contained, single-server **Security Operations Center (SOC) simulator** built in **Flask + SQLite**. Each registered user gets their own isolated workspace: they submit security events (manually, or via the built-in live attack simulator), the system parses/enriches/correlates them, raises alerts, opens tickets, sends outbound notifications, and shows everything on a dashboard.
 
 - **Type:** Web application (server-rendered pages + JSON API)
 - **Language/Framework:** Python 3, Flask
