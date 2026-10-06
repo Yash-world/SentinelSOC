@@ -49,7 +49,7 @@ Standard library also used: `sqlite3`, `hashlib`, `ipaddress`, `re`, `csv`, `io`
 SECRET_KEY=replace-this-with-a-long-random-secret-key
 
 FLASK_DEBUG=false
-FLASK_HOST=127.0.0.1
+FLASK_HOST=0.0.0.0
 FLASK_PORT=5000
 
 # Alert notifications (all optional — leave blank to disable)
@@ -252,17 +252,9 @@ Runs **8 independent per-event rules**, any number of which can fire on a single
 10. **Outbound notifications:** every newly created (non-duplicate) alert is passed to `notify_alert()` (see §10 below) — deduplicated repeats of an already-open alert are never re-notified
 11. Returns both the legacy single-alert shape (`alert`, `alert_id`, `ticket`) and the new multi-alert shape (`alerts[]`, `alert_ids[]`, `tickets[]`)
 
-## 10. Alert Notifications (`app/notifications.py`) — *new*
 
-Sends each newly created alert out to zero or more outbound channels. Fully optional and off by default; a misconfigured or unreachable channel can never break event ingestion (every send is wrapped in its own try/except and returns `False` on failure instead of raising).
 
-- **Severity gate:** `ALERT_NOTIFY_MIN_SEVERITY` (default `HIGH`) — alerts below this severity are skipped entirely, so LOW/MEDIUM findings stay dashboard-only and channels aren't spammed.
-- **Slack (`send_slack_alert`)** — posts a formatted message to a Slack incoming webhook URL (`SLACK_WEBHOOK_URL`). Uses only `urllib.request` from the standard library — no `slack-sdk` dependency needed.
-- **Email (`send_email_alert`)** — sends a plain-text email over SMTP with STARTTLS (`smtplib` + `ssl`), gated behind `ALERT_EMAIL_ENABLED=true`. Requires `SMTP_HOST`, `SMTP_USER`, `SMTP_PASSWORD`, `ALERT_EMAIL_TO`; `SMTP_PORT` defaults to `587` and `ALERT_EMAIL_FROM` defaults to `SMTP_USER`.
-- **`notify_alert(alert)`** — the single entry point called from `_ingest_event`; fans an alert out to every configured channel and returns `{"slack": bool, "email": bool, "skipped": bool}`.
-- Both channels are independently optional — Slack-only, email-only, both, or neither (default) are all valid configurations.
-
-## 11. Live Attack Simulator (`app/routes.py::simulate_event`) — *new*
+## 10. Live Attack Simulator (`app/routes.py::simulate_event`) — *new*
 
 Powers the "Simulate live attack traffic" control on the Input page so the project can be demoed without a real log source.
 
@@ -270,7 +262,7 @@ Powers the "Simulate live attack traffic" control on the Input page so the proje
 - Because it reuses `_ingest_event`, every simulated event still goes through log analysis, IOC extraction, threat-intel enrichment, detection, ticket creation, and notifications — it is not a separate, simplified code path.
 - Intended to be called repeatedly (e.g. every 2–3 seconds from the browser) to stream a live-looking feed of alerts, IOCs, and tickets onto the dashboard for demos.
 
-## 12. Ticketing (`app/ticketing.py`)
+## 11. Ticketing (`app/ticketing.py`)
 
 - **Ticket ID format:** `SOC-YYYYMMDD-00001` — a daily auto-incrementing counter per date
 - **Priority mapping from severity:** CRITICAL→P1, HIGH→P2, MEDIUM→P3, LOW→P4 (default P4 if unknown)
@@ -278,7 +270,7 @@ Powers the "Simulate live attack traffic" control on the Input page so the proje
 - **Ticket statuses:** `OPEN`, `IN_PROGRESS`, `RESOLVED`, `CLOSED`
 - **PDF export** (`generate_ticket_pdf`) — built with ReportLab (`SimpleDocTemplate`, A4 page), includes a header (`SOC INCIDENT TICKET — <ticket_id>`), a details table, and safely escapes/handles `NULL` fields (renders as `-`)
 
-## 13. Web Pages / Templates (`app/templates/`)
+## 12. Web Pages / Templates (`app/templates/`)
 
 | Route Template Auth required |                  |                                                     |
 | ---------------------------- | ---------------- | --------------------------------------------------- |
@@ -289,7 +281,7 @@ Powers the "Simulate live attack traffic" control on the Input page so the proje
 | `GET /input`                 | `input.html`     | Yes — event submission form + live attack simulator |
 | `GET /dashboard`             | `dashboard.html` | Yes — stats, alerts, IOCs, tickets                  |
 
-## 14. REST API (`app/routes.py`)
+## 13. REST API (`app/routes.py`)
 
 All endpoints below (except pages already listed) require an authenticated session (`login_required()` → redirect to login if missing) and are scoped to `user_id = session["user_id"]`.
 
@@ -348,7 +340,7 @@ All endpoints below (except pages already listed) require an authenticated sessi
 
 ---
 
-## 15. Security Measures
+## 14. Security Measures
 
 - Session cookies: `HttpOnly`, `SameSite=Lax`, optional `Secure` flag for HTTPS
 - CSRF protection on all forms (Flask-WTF)
@@ -363,7 +355,7 @@ All endpoints below (except pages already listed) require an authenticated sessi
 
 ---
 
-## 16. Testing (`tests/`)
+## 15. Testing (`tests/`)
 
 - `test_detection.py` — detection rule/engine tests
 - `test_iocs_tracker.py` — IOC extraction tests
@@ -372,7 +364,7 @@ All endpoints below (except pages already listed) require an authenticated sessi
 
 ---
 
-## 17. Getting Started
+## 16. Getting Started
 
 ```
 # 1. Clone and enter the project
@@ -399,24 +391,24 @@ Then open `http://127.0.0.1:5000`, register an account, log in, and either submi
 
 ---
 
-## 18. Screenshots
+## 17. Screenshots
 
-### 18.1 Register Page
+### 17.1 Register Page
 
 <img width="1920" height="1080" alt="Screenshot (335)" src="https://github.com/user-attachments/assets/2ac73541-4dcb-46e1-9a06-cc6e57ce705e" />
 
 
-### 18.2 Login Page
+### 17.2 Login Page
 
 <img width="1920" height="1080" alt="Screenshot (334)" src="https://github.com/user-attachments/assets/c5708d59-5e5b-4864-b533-95c40262a824" />
 
 
-### 18.3 Input / Event Submission Page
+### 17.3 Input / Event Submission Page
 
 <img width="1920" height="1080" alt="Screenshot (337)" src="https://github.com/user-attachments/assets/2ace16fc-a61b-4bcd-8875-08a7d37aacb0" />
 
 
-### 18.4 Dashboard
+### 17.4 Dashboard
 <img width="1920" height="712" alt="Screenshot (338)" src="https://github.com/user-attachments/assets/a7e94ee4-7f4f-4c8f-ac7f-d886c2d3bb38" />
 <img width="1920" height="858" alt="Screenshot (339)" src="https://github.com/user-attachments/assets/9ac02fb3-e284-4dd0-b306-bfc577dac7e7" />
 <img width="1920" height="972" alt="Screenshot (340)" src="https://github.com/user-attachments/assets/18b7dbce-df7b-4de7-9f2e-37170e72300e" />
@@ -425,12 +417,12 @@ Then open `http://127.0.0.1:5000`, register an account, log in, and either submi
 
 
 
-### 18.5 PDF Ticket
+### 17.5 PDF Ticket
 <img width="984" height="1080" alt="Screenshot (343)" src="https://github.com/user-attachments/assets/bd3bcd86-d8bd-4de9-ad7f-8a50d777fa66" />
 
 
 
-## 19. Project File Map
+## 18. Project File Map
 
 ```
 sentinelsoc/
