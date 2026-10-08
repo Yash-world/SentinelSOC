@@ -489,6 +489,157 @@
             color: #ffb3b3;
         }
 
+
+        /* ================= TICKET RESPONSE MODAL ================= */
+
+        .ticket-modal {
+            position: fixed;
+            inset: 0;
+            z-index: 9999;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            padding: 24px;
+            background: rgba(0, 0, 0, 0.72);
+            backdrop-filter: blur(4px);
+        }
+
+        .ticket-modal.open {
+            display: flex;
+        }
+
+        .ticket-modal-card {
+            width: min(760px, 100%);
+            max-height: 90vh;
+            overflow-y: auto;
+            background: var(--panel-solid);
+            border: 1px solid var(--border-strong);
+            border-radius: var(--radius);
+            box-shadow: 0 24px 80px rgba(0,0,0,.55);
+            padding: 24px;
+        }
+
+        .ticket-modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            gap: 16px;
+            margin-bottom: 18px;
+        }
+
+        .ticket-modal-title {
+            color: var(--text-hi);
+            font-size: 18px;
+            font-weight: 700;
+        }
+
+        .ticket-modal-subtitle {
+            color: var(--text-mid);
+            font-size: 11px;
+            margin-top: 5px;
+        }
+
+        .ticket-modal-close {
+            border: 1px solid var(--border);
+            background: rgba(255,255,255,.03);
+            color: var(--text-mid);
+            width: 34px;
+            height: 34px;
+            border-radius: var(--radius-sm);
+            cursor: pointer;
+            font-size: 18px;
+        }
+
+        .ticket-detail-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .ticket-detail-item {
+            border: 1px solid var(--border);
+            background: rgba(255,255,255,.02);
+            border-radius: var(--radius-sm);
+            padding: 10px 12px;
+        }
+
+        .ticket-detail-label {
+            color: var(--text-dim);
+            font-size: 9px;
+            text-transform: uppercase;
+            letter-spacing: .08em;
+            margin-bottom: 5px;
+        }
+
+        .ticket-detail-value {
+            color: var(--text-hi);
+            font-size: 11px;
+            word-break: break-word;
+        }
+
+        .ticket-response-label {
+            display: block;
+            color: var(--text-hi);
+            font-size: 11px;
+            font-weight: 700;
+            margin-bottom: 8px;
+        }
+
+        #ticketResponseInput {
+            width: 100%;
+            min-height: 170px;
+            resize: vertical;
+            box-sizing: border-box;
+            background: rgba(0,0,0,.18);
+            color: var(--text-hi);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            padding: 12px;
+            font-family: var(--mono);
+            font-size: 11px;
+            line-height: 1.6;
+            outline: none;
+        }
+
+        #ticketResponseInput:focus {
+            border-color: var(--border-strong);
+        }
+
+        .ticket-modal-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 8px;
+            margin-top: 14px;
+        }
+
+        .ticket-save-btn {
+            border: 1px solid var(--border-strong);
+            background: var(--cyan-dim);
+            color: var(--text-hi);
+            padding: 9px 14px;
+            border-radius: var(--radius-sm);
+            cursor: pointer;
+            font-family: var(--mono);
+            font-size: 10.5px;
+            font-weight: 700;
+        }
+
+        .ticket-save-btn:disabled {
+            opacity: .6;
+            cursor: wait;
+        }
+
+        @media (max-width: 700px) {
+            .ticket-detail-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .ticket-modal {
+                padding: 10px;
+            }
+        }
+
         select {
             background: var(--panel-solid);
             color: var(--text-hi);
@@ -1996,6 +2147,75 @@
     }
 
 
+    async function loadTickets() {
+
+        const tbody = document.getElementById("ticketsTableBody");
+
+        if (!tbody) {
+            return;
+        }
+
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="8" class="loading">
+                    Loading tickets...
+                </td>
+            </tr>
+        `;
+
+        try {
+            const result = await fetchJSON("/api/tickets");
+            const tickets = Array.isArray(result)
+                ? result
+                : (Array.isArray(result.items) ? result.items : []);
+
+            if (tickets.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="8" class="empty">
+                            No SOC tickets found.
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+
+            tbody.innerHTML = tickets.map(ticket => {
+                const created = ticket.created_at
+                    ? new Date(ticket.created_at).toLocaleString()
+                    : "-";
+
+                return `
+                    <tr>
+                        <td><strong>${escapeHTML(ticket.ticket_id || `#${ticket.id}`)}</strong></td>
+                        <td>${escapeHTML(ticket.title || "Security Incident")}</td>
+                        <td>${severityBadge(ticket.severity)}</td>
+                        <td>${priorityBadge(ticket.priority)}</td>
+                        <td>${ticketStatusSelect(ticket)}</td>
+                        <td>${escapeHTML(ticket.assignee || "-")}</td>
+                        <td>${escapeHTML(created)}</td>
+                        <td>
+                            <button type="button" class="ticket-action" onclick="viewTicket(${Number(ticket.id)})">
+                                View
+                            </button>
+                        </td>
+                    </tr>
+                `;
+            }).join("");
+
+        } catch (error) {
+            console.error("Ticket loading failed:", error);
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="8" class="empty error">
+                        Failed to load tickets.
+                    </td>
+                </tr>
+            `;
+        }
+    }
+
+
     function ticketStatusSelect(ticket) {
 
         const status =
@@ -2109,195 +2329,148 @@
     }
 
 
-    function showTicketMessage(ticket) {
+    let activeTicketId = null;
 
-        const message = [
-
-            `Ticket: ${ticket.ticket_id || ticket.id || "-"}`,
-
-            `Title: ${ticket.title || "-"}`,
-
-            `Severity: ${ticket.severity || "-"}`,
-
-            `Priority: ${ticket.priority || "-"}`,
-
-            `Status: ${ticket.status || "-"}`,
-
-            `Assignee: ${ticket.assignee || "-"}`,
-
-            `Source IP: ${ticket.source_ip || "-"}`,
-
-            `Rule: ${ticket.rule_name || "-"}`,
-
-            `MITRE: ${ticket.mitre_id || "-"}`,
-
-            `Description: ${ticket.description || "-"}`
-
-        ].join("\n");
-
-
-        alert(message);
+    function ticketDetail(label, value) {
+        return `
+            <div class="ticket-detail-item">
+                <div class="ticket-detail-label">${escapeHTML(label)}</div>
+                <div class="ticket-detail-value">${escapeHTML(value || "-")}</div>
+            </div>
+        `;
     }
 
+    function openTicketModal(ticket) {
+        activeTicketId = ticket.id;
 
-    async function loadTickets() {
+        document.getElementById("ticketModalTitle").textContent =
+            ticket.ticket_id || `Ticket #${ticket.id}`;
 
-        const tbody =
-            document.getElementById("ticketsTableBody");
+        document.getElementById("ticketModalSubtitle").textContent =
+            ticket.title || "SOC Incident Ticket";
+
+        document.getElementById("ticketDetailGrid").innerHTML = [
+            ticketDetail("Severity", ticket.severity),
+            ticketDetail("Priority", ticket.priority),
+            ticketDetail("Status", ticket.status),
+            ticketDetail("Assignee", ticket.assignee),
+            ticketDetail("Source IP", ticket.source_ip),
+            ticketDetail("Rule", ticket.rule_name),
+            ticketDetail("MITRE ATT&CK", ticket.mitre_id),
+            ticketDetail("Description", ticket.description)
+        ].join("");
+
+        document.getElementById("ticketResponseInput").value =
+            ticket.resolution || "";
+
+        const modal = document.getElementById("ticketResponseModal");
+        modal.classList.add("open");
+        modal.setAttribute("aria-hidden", "false");
+    }
+
+    function closeTicketModal() {
+        const modal = document.getElementById("ticketResponseModal");
+        modal.classList.remove("open");
+        modal.setAttribute("aria-hidden", "true");
+        activeTicketId = null;
+    }
+
+    async function saveTicketResponse() {
+        if (!activeTicketId) {
+            return;
+        }
+
+        const responseText =
+            document.getElementById("ticketResponseInput").value.trim();
+
+        const button =
+            document.getElementById("saveTicketResponseBtn");
+
+        button.disabled = true;
+        button.textContent = "Saving...";
 
         try {
+            // Keep the current status while saving the response.
+            const currentTicket = await fetchJSON(
+                `/api/tickets/${activeTicketId}`
+            );
 
-            const data =
-                await fetchJSON("/api/tickets");
+            const data = await fetchJSON(
+                `/api/tickets/${activeTicketId}`,
+                {
+                    method: "PATCH",
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify({
+                        status: String(currentTicket.status || "OPEN").toUpperCase(),
+                        resolution: responseText
+                    })
+                }
+            );
 
-            const tickets = Array.isArray(data)
-                ? data
-                : (data.tickets || []);
-
-
-            if (!tickets.length) {
-
-                tbody.innerHTML = `
-                    <tr>
-                        <td colspan="8" class="empty">
-                            No SOC tickets found.
-                        </td>
-                    </tr>
-                `;
-
-                return;
+            if (!data || data.success !== true) {
+                throw new Error(
+                    data?.error || "Server did not confirm the response update."
+                );
             }
 
+            openTicketModal(data.ticket);
+            await loadTickets();
 
-            tbody.innerHTML = tickets
-                .map(ticket => `
-
-                <tr>
-
-                    <td>
-                        ${escapeHTML(
-                            ticket.ticket_id ||
-                            ticket.id ||
-                            "-"
-                        )}
-                    </td>
-
-                    <td>
-                        ${escapeHTML(
-                            ticket.title ||
-                            "Security Ticket"
-                        )}
-                    </td>
-
-                    <td>
-                        ${severityBadge(
-                            ticket.severity
-                        )}
-                    </td>
-
-                    <td>
-                        ${priorityBadge(
-                            ticket.priority
-                        )}
-                    </td>
-
-                    <td>
-                        ${ticketStatusSelect(ticket)}
-                    </td>
-
-                    <td>
-                        ${escapeHTML(
-                            ticket.assignee ||
-                            "SOC Analyst"
-                        )}
-                    </td>
-
-                    <td>
-                        ${formatDate(
-                            ticket.created_at
-                        )}
-                    </td>
-
-                    <td>
-
-                        <button
-                            class="ticket-action"
-                            onclick="viewTicket(
-                                ${ticket.id}
-                            )"
-                        >
-                            View
-                        </button>
-
-                        <button
-                            class="ticket-action pdf-btn"
-                            onclick="downloadTicketPDF(
-                                ${ticket.id}
-                            )"
-                        >
-                            PDF
-                        </button>
-
-                    </td>
-
-                </tr>
-
-            `).join("");
-
+            alert("Response saved successfully.");
 
         } catch (error) {
-
-            console.error(
-                "Tickets error:",
-                error
+            console.error("Ticket response save failed:", error);
+            alert(
+                error.message ||
+                "Failed to save the response."
             );
-
-            tbody.innerHTML = `
-                <tr>
-                    <td colspan="8" class="empty error">
-                        Failed to load tickets.
-                    </td>
-                </tr>
-            `;
-
+        } finally {
+            button.disabled = false;
+            button.textContent = "Save Response";
         }
     }
-
 
     async function viewTicket(ticketId) {
-
         try {
+            const ticket = await fetchJSON(
+                `/api/tickets/${ticketId}`
+            );
 
-            const ticket =
-                await fetchJSON(
-                    `/api/tickets/${ticketId}`
-                );
-
-            showTicketMessage(ticket);
+            openTicketModal(ticket);
 
         } catch (error) {
-
-            console.error(
-                "View ticket error:",
-                error
-            );
-
-            alert(
-                "Failed to load ticket."
-            );
-
+            console.error("View ticket error:", error);
+            alert("Failed to load ticket.");
         }
     }
 
-
     function downloadTicketPDF(ticketId) {
-
         window.open(
             `/api/tickets/${ticketId}/pdf`,
             "_blank"
         );
-
     }
+
+    function downloadCurrentTicketPDF() {
+        if (activeTicketId) {
+            downloadTicketPDF(activeTicketId);
+        }
+    }
+
+    document.addEventListener("keydown", function (event) {
+        if (event.key === "Escape") {
+            closeTicketModal();
+        }
+    });
+
+    document.addEventListener("click", function (event) {
+        const modal = document.getElementById("ticketResponseModal");
+        if (event.target === modal) {
+            closeTicketModal();
+        }
+    });
 
 
     /* =========================================================
@@ -2374,6 +2547,41 @@
     );
 
 </script>
+
+
+
+<div id="ticketResponseModal" class="ticket-modal" aria-hidden="true">
+    <div class="ticket-modal-card" role="dialog" aria-modal="true" aria-labelledby="ticketModalTitle">
+        <div class="ticket-modal-header">
+            <div>
+                <div id="ticketModalTitle" class="ticket-modal-title">SOC Ticket</div>
+                <div id="ticketModalSubtitle" class="ticket-modal-subtitle">Incident response</div>
+            </div>
+            <button type="button" class="ticket-modal-close" onclick="closeTicketModal()" aria-label="Close">×</button>
+        </div>
+
+        <div id="ticketDetailGrid" class="ticket-detail-grid"></div>
+
+        <label class="ticket-response-label" for="ticketResponseInput">
+            Your Response / Investigation Notes
+        </label>
+        <textarea
+            id="ticketResponseInput"
+            maxlength="10000"
+            placeholder="Describe what you investigated, what you found, and what action you took..."
+        ></textarea>
+
+        <div class="ticket-modal-actions">
+            <button type="button" class="ticket-action" onclick="closeTicketModal()">Cancel</button>
+            <button type="button" class="ticket-save-btn" id="saveTicketResponseBtn" onclick="saveTicketResponse()">
+                Save Response
+            </button>
+            <button type="button" class="ticket-action pdf-btn" onclick="downloadCurrentTicketPDF()">
+                Download PDF
+            </button>
+        </div>
+    </div>
+</div>
 
 </body>
 </html>
