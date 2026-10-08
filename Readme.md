@@ -567,7 +567,6 @@ Checklist:
 ---
 
 
+## 👤 Author
 
-## 📄 License
-
-Add a license of your choice (MIT is common for portfolio projects).
+**Yash-world** — https://github.com/Yash-world
