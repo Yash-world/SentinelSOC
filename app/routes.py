@@ -25,37 +25,6 @@ from .ticketing import generate_ticket_pdf
 bp = Blueprint("main", __name__)
 
 
-# Event types accepted by the Input page / API.
-# The selected event type is authoritative for detection;
-# message text is used for enrichment/IOC extraction, not
-# to silently change the security category.
-ALLOWED_EVENT_TYPES = {
-    "login",
-    "failed_login",
-    "suspicious_login",
-    "port_scan",
-    "network_scan",
-    "malware",
-    "ransomware",
-    "brute_force",
-    "phishing",
-    "exploit",
-    "unauthorized_access",
-    "intrusion",
-}
-
-EVENT_TYPE_ALIASES = {
-    "login_failed": "failed_login",
-    "authentication_failure": "failed_login",
-    "auth_failure": "failed_login",
-    "nmap_scan": "port_scan",
-    "scan": "port_scan",
-    "malware_detected": "malware",
-    "virus": "malware",
-    "trojan": "malware",
-}
-
-
 # ============================================================
 # AUTH HELPERS
 # ============================================================
@@ -725,14 +694,7 @@ def create_event():
             "event_type",
             ""
         )
-    ).strip().lower()
-
-    # Normalize only the explicit event-type selection.
-    # Do not infer a different detection category from message text.
-    event_type = EVENT_TYPE_ALIASES.get(
-        event_type,
-        event_type,
-    )
+    ).strip()
 
     source_ip = str(
         data.get(
@@ -763,12 +725,6 @@ def create_event():
     if not event_type:
         return jsonify({
             "error": "event_type is required"
-        }), 400
-
-    if event_type not in ALLOWED_EVENT_TYPES:
-        return jsonify({
-            "error": "Unsupported event_type",
-            "allowed": sorted(ALLOWED_EVENT_TYPES),
         }), 400
 
     if not source_ip:
@@ -816,15 +772,11 @@ def create_event():
             }), 400
 
     event = {
-        # Keep the user's explicit selection authoritative.
         "event_type": event_type,
         "source_ip": source_ip,
         "username": username,
         "destination_port": destination_port,
-        "status": str(data.get("status", "")).strip().lower(),
-        "message": raw_log,
         "raw_log": raw_log,
-        "timestamp": data.get("timestamp"),
     }
 
     # --------------------------------------------------------
@@ -846,17 +798,10 @@ def create_event():
     if isinstance(log_analysis, dict):
         event.update(log_analysis)
 
-    # analyze_log can infer an event type from message keywords. That is
-    # useful for raw-log parsing, but it must not override the explicit
-    # event type selected by the user in this authenticated input flow.
-    event["event_type"] = event_type
-
+    event_type = str(event.get("event_type", event_type)).strip()
     source_ip = str(event.get("source_ip", source_ip)).strip()
     username = str(event.get("username", username)).strip()
     destination_port = event.get("destination_port", destination_port)
-    event["status"] = str(
-        data.get("status", event.get("status", ""))
-    ).strip().lower()
 
     # --------------------------------------------------------
     # INSERT EVENT
@@ -864,12 +809,9 @@ def create_event():
 
     db = get_db()
 
-    timestamp = event.get("timestamp")
-
-    if not timestamp:
-        timestamp = datetime.now(
-            timezone.utc
-        ).isoformat()
+    timestamp = datetime.now(
+        timezone.utc
+    ).isoformat()
 
     cursor = db.execute(
         """
@@ -958,10 +900,6 @@ def create_event():
     # --------------------------------------------------------
     # DETECTION ENGINE
     # --------------------------------------------------------
-
-    # Final guard: detection must see the explicit event type, even if
-    # an analyzer or enrichment layer added message-derived metadata.
-    event["event_type"] = event_type
 
     detection_result = process_event(
         event,
@@ -1423,6 +1361,16 @@ def update_ticket(ticket_id):
         )
     ).strip().upper()
 
+    # Analyst/user response is optional. Keep it attached to the
+    # ticket so it appears in the ticket details and PDF report.
+    resolution = data.get("resolution", None)
+    if resolution is not None:
+        resolution = str(resolution).strip()
+        if len(resolution) > 10000:
+            return jsonify({
+                "error": "Resolution/response is too long. Maximum 10000 characters."
+            }), 400
+
     allowed_statuses = {
         "OPEN",
         "IN_PROGRESS",
@@ -1458,19 +1406,36 @@ def update_ticket(ticket_id):
             "error": "Ticket not found"
         }), 404
 
-    db.execute(
-        """
-        UPDATE tickets
-        SET status = ?
-        WHERE id = ?
-          AND user_id = ?
-        """,
-        (
-            status,
-            ticket_id,
-            user_id,
-        ),
-    )
+    if resolution is None:
+        db.execute(
+            """
+            UPDATE tickets
+            SET status = ?
+            WHERE id = ?
+              AND user_id = ?
+            """,
+            (
+                status,
+                ticket_id,
+                user_id,
+            ),
+        )
+    else:
+        db.execute(
+            """
+            UPDATE tickets
+            SET status = ?,
+                resolution = ?
+            WHERE id = ?
+              AND user_id = ?
+            """,
+            (
+                status,
+                resolution or None,
+                ticket_id,
+                user_id,
+            ),
+        )
 
     db.commit()
 
