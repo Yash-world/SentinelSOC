@@ -1,443 +1,573 @@
-# SentinelSOC — Technical Specification
+# 🛡️ SentinelSOC
 
-## 1. Overview
+> A self-contained **Security Operations Center (SOC) simulator** built with **Flask + SQLite**.
+> Feed it a security event or a raw log line and watch it get parsed, enriched with threat intelligence, matched against detection rules, turned into an **alert**, and escalated into an **incident ticket**, all on a live dashboard.
 
-SentinelSOC is a self-contained, single-server **Security Operations Center (SOC) simulator** built with **Flask + SQLite**. Each registered user gets an isolated workspace: they submit security events manually, and the system parses, enriches and correlates them, raises alerts, opens tickets, and shows everything on a dashboard.
-
-* **Type:** Web application (server-rendered pages + JSON API)
-* **Language/Framework:** Python 3, Flask
-* **Database:** SQLite (file: `soc.db`, auto-created)
-* **Auth model:** Session-based, per-user data isolation (every query is scoped by `user_id`)
-* **Architecture pattern:** Flask application factory + Blueprints (`auth_bp`, `main.bp`)
-
----
-
-## 2. Tech Stack & Dependencies (`requirements.txt`)
-
-| Package       | Version range | Purpose                  |
-| ------------- | ------------- | ------------------------ |
-| Flask         | 3.x           | Web framework            |
-| Flask-Limiter | 3.5 – 4.x     | Rate limiting            |
-| Flask-WTF     | 1.2.x         | CSRF protection          |
-| python-dotenv | 1.x           | Load `.env` config       |
-| pytest        | 8.x           | Testing                  |
-| reportlab     | 4.x           | PDF generation (tickets) |
-| gunicorn      | 23.x          | Production WSGI server   |
-
-Standard library also used: `sqlite3`, `hashlib`, `ipaddress`, `re`, `csv`, `io`, `json`, `secrets`, `datetime`.
+![Python](https://img.shields.io/badge/Python-3.x-blue)
+![Flask](https://img.shields.io/badge/Flask-3.x-lightgrey)
+![SQLite](https://img.shields.io/badge/Database-SQLite-003B57)
+![Tests](https://img.shields.io/badge/Tests-pytest-green)
+![MITRE](https://img.shields.io/badge/Mapped%20to-MITRE%20ATT%26CK-red)
 
 ---
 
-## 3. Application Configuration (`app/__init__.py`)
+## 📑 Table of Contents
 
-* **Factory function:** `create_app()`
-* `SECRET_KEY` — **required** env var; the app raises `RuntimeError` if it is missing
-* `SESSION_COOKIE_HTTPONLY = True`
-* `SESSION_COOKIE_SAMESITE = "Lax"`
-* `SESSION_COOKIE_SECURE` — read from env (`SESSION_COOKIE_SECURE=true` for HTTPS deployments, default `false`)
-* `PERMANENT_SESSION_LIFETIME = 3600` seconds (1 hour)
-* CSRF protection enabled globally via Flask-WTF
-* `DATABASE` path = `<project_root>/soc.db`
-* **Rate limiter defaults:** `200 per day`, `50 per hour` per client IP (Flask-Limiter, key = remote address)
-* Blueprints registered: `auth_bp` (auth routes), `bp` (pages + API routes)
-* `init_db(app)` runs on startup (creates tables, indexes and runs migrations)
+1. [What is SentinelSOC?](#1--what-is-sentinelsoc)
+2. [Who is it for?](#2--who-is-it-for)
+3. [Screenshots](#3--screenshots)
+4. [Key Features](#4--key-features)
+5. [SOC Concepts in 60 Seconds](#5--soc-concepts-in-60-seconds)
+6. [Quick Start](#6--quick-start)
+7. [Step-by-Step Walkthrough](#7--step-by-step-walkthrough)
+8. [Ready-to-Use Test Scenarios](#8--ready-to-use-test-scenarios)
+9. [How It Works (Pipeline)](#9--how-it-works-pipeline)
+10. [Detection Rules](#10--detection-rules)
+11. [Threat Intelligence Feed](#11--threat-intelligence-feed)
+12. [Tickets & Reports](#12--tickets--reports)
+13. [REST API Reference](#13--rest-api-reference)
+14. [Configuration](#14--configuration)
+15. [Database Overview](#15--database-overview)
+16. [Project Structure](#16--project-structure)
+17. [Security Measures](#17--security-measures)
+18. [Testing](#18--testing)
+19. [Deployment](#19--deployment)
+20. [Troubleshooting](#20--troubleshooting)
+21. [FAQ](#21--faq)
+22. [Limitations & Roadmap](#22--limitations--roadmap)
+23. [Further Reading](#23--further-reading)
 
-### Environment variables
+---
 
-| Variable                | Default / example                         | Description                                   |
-| ----------------------- | ----------------------------------------- | --------------------------------------------- |
-| `SECRET_KEY`            | *(required)*                              | Flask secret key                              |
-| `FLASK_DEBUG`           | `false`                                   | Enables Flask debug mode when `true`          |
-| `FLASK_HOST`            | `0.0.0.0`                                 | Host to bind to                               |
-| `PORT`                  | `5000`                                    | Port to listen on                             |
-| `SESSION_COOKIE_SECURE` | `false`                                   | Set `true` when serving over HTTPS            |
+## 1. 🔍 What is SentinelSOC?
 
-`.env.example` ships with:
+In a real company, a SOC team watches thousands of security events (failed logins, port scans, malware detections) and has to decide which ones matter. SentinelSOC reproduces that workflow in a small web app you can run on your laptop.
+
+You submit an event, for example:
 
 ```
-SECRET_KEY=replace-this-with-a-long-random-secret-key
+Failed login for user admin from 185.220.101.45 port 22
+```
+
+and SentinelSOC automatically:
+
+1. **Normalizes** the text into structured fields (event type, IP, username, port)
+2. **Extracts indicators of compromise (IOCs)** such as IPs, domains, URLs and file hashes
+3. **Checks them against a threat-intelligence feed** (and raises severity if there's a hit)
+4. **Runs detection rules** mapped to MITRE ATT&CK
+5. **Raises an alert** (and de-duplicates repeats)
+6. **Opens an incident ticket** with a priority (P1–P4) that you can export as PDF
+7. **Shows everything on a dashboard**
+
+Every user gets a private workspace, so several people can use one instance without seeing each other's data.
+
+---
+
+## 2. 👥 Who is it for?
+
+| You are…                      | How SentinelSOC helps                                          |
+| ----------------------------- | -------------------------------------------------------------- |
+| A student learning blue-team  | See how events become alerts, tickets and ATT&CK techniques    |
+| A job seeker                  | A portfolio project that covers detection, enrichment and ticketing |
+| A trainer / teacher           | A safe sandbox to demo SOC workflows without real infrastructure |
+| A developer                   | A clean Flask app (factory + blueprints, REST API, tests) to learn from or extend |
+
+> ⚠️ It is a **simulator**, not a production SIEM. Events are entered by hand and the threat feed is a small sample.
+
+---
+
+## 3. 📸 Screenshots
+
+### 3.1 Register page
+Create an account (name, email, password with at least 8 characters).
+
+<img width="1920" height="1080" alt="Register page" src="https://github.com/user-attachments/assets/2ac73541-4dcb-46e1-9a06-cc6e57ce705e" />
+
+### 3.2 Login page
+Sign in. Repeated failures from one IP are themselves detected as a brute-force attack.
+
+<img width="1920" height="1080" alt="Login page" src="https://github.com/user-attachments/assets/c5708d59-5e5b-4864-b533-95c40262a824" />
+
+### 3.3 Input / event submission page
+Pick an event type, enter the source IP, optional username/port/status, or paste a raw log line.
+
+<img width="1920" height="1080" alt="Input page" src="https://github.com/user-attachments/assets/2ace16fc-a61b-4bcd-8875-08a7d37aacb0" />
+
+### 3.4 Dashboard
+Summary counters, alerts, events, IOCs and tickets in one place.
+
+<img width="1920" height="712" alt="Dashboard overview" src="https://github.com/user-attachments/assets/a7e94ee4-7f4f-4c8f-ac7f-d886c2d3bb38" />
+<img width="1920" height="858" alt="Dashboard alerts and IOCs" src="https://github.com/user-attachments/assets/9ac02fb3-e284-4dd0-b306-bfc577dac7e7" />
+<img width="1920" height="972" alt="Dashboard tickets" src="https://github.com/user-attachments/assets/18b7dbce-df7b-4de7-9f2e-37170e72300e" />
+
+### 3.5 PDF incident ticket
+Every ticket can be downloaded as a formatted PDF.
+
+<img width="984" height="1080" alt="PDF ticket" src="https://github.com/user-attachments/assets/bd3bcd86-d8bd-4de9-ad7f-8a50d777fa66" />
+
+---
+
+## 4. ✨ Key Features
+
+| Area               | What you get                                                                                   |
+| ------------------ | ---------------------------------------------------------------------------------------------- |
+| Log analysis       | Free-text logs → structured events (type, IP, port, username)                                  |
+| Detection          | 8 event-level rules + 2 correlation rules, each mapped to a MITRE ATT&CK technique             |
+| IOC tracking       | IPs, domains, URLs, emails, MD5 / SHA1 / SHA256, de-duplicated and linked to events            |
+| Threat intel       | Local feed matching (feed values stored in de-fanged form such as `evil[.]com` are normalized before comparing), automatic severity boost  |
+| Alert hygiene      | 5-minute de-duplication so one attack doesn't create 100 identical alerts                      |
+| Ticketing          | Auto-created tickets `SOC-YYYYMMDD-00001`, P1–P4 priority, status workflow, PDF export         |
+| Analyst response   | Write your own response / resolution notes on any ticket (up to 10,000 characters); saved with the ticket and printed in the PDF |
+| Dashboard          | Counters, alert/event/IOC/ticket tables                                                        |
+| API & reporting    | JSON REST API with filters + pagination, CSV export of alerts                                  |
+| Multi-user         | Registration/login, every query scoped to the logged-in user                                   |
+| Hardening          | CSRF protection, rate limiting, hashed passwords, secure cookie flags, session expiry          |
+
+---
+
+## 5. 🧠 SOC Concepts in 60 Seconds
+
+| Term                | Meaning in this project                                                                 |
+| ------------------- | --------------------------------------------------------------------------------------- |
+| **Event**           | One thing that happened, e.g. "failed login from 10.0.0.5"                              |
+| **IOC**             | Indicator of Compromise: an IP, domain, URL, email or file hash tied to malicious activity |
+| **Threat intel**    | Known-bad indicators with context (malware family, severity, confidence)                |
+| **Detection rule**  | A condition that turns an event into an alert                                           |
+| **Correlation**     | Looking at *many* events together (e.g. 5 failed logins in 5 minutes = brute force)     |
+| **Alert**           | "Something suspicious happened", with a severity: LOW / MEDIUM / HIGH / CRITICAL        |
+| **Ticket**          | A tracked incident an analyst works through: OPEN → IN_PROGRESS → RESOLVED → CLOSED     |
+| **MITRE ATT&CK**    | A public catalogue of attacker techniques (e.g. T1110 = Brute Force)                    |
+| **De-fanged IOC**   | A safe-to-share form such as `evil[.]com`. The threat feed uses it, and SentinelSOC normalizes it to `evil.com` when matching |
+
+---
+
+## 6. 🚀 Quick Start
+
+**Requirements:** Python 3 (the project was developed on Python 3.13; 3.10+ is expected to work) and `pip`. No database server or external service is needed.
+
+### Step 1: Get the code
+
+```bash
+git clone <your-repo-url>
+cd SentinelSOC
+```
+
+### Step 2: Create a virtual environment and install dependencies
+
+```bash
+python -m venv venv
+
+# macOS / Linux
+source venv/bin/activate
+
+# Windows (PowerShell)
+venv\Scripts\Activate.ps1
+# Windows (cmd)
+venv\Scripts\activate
+
+pip install -r requirements.txt
+```
+
+### Step 3: Configure environment variables
+
+```bash
+cp .env.example .env          # Windows: copy .env.example .env
+python -c "import secrets; print(secrets.token_hex(32))"
+```
+
+Open `.env` and paste the generated value as `SECRET_KEY`:
+
+```env
+SECRET_KEY=<paste-the-generated-64-character-value-here>
 FLASK_DEBUG=false
-FLASK_HOST=0.0.0.0
+FLASK_HOST=127.0.0.1
 ```
 
-`PORT` and `SESSION_COOKIE_SECURE` are optional and can be added to your `.env`.
+> The app **refuses to start** without a `SECRET_KEY`.
+
+### Step 4: Run it
+
+```bash
+python run.py
+```
+
+Open **http://127.0.0.1:5000** → you'll be redirected to the login page. The database (`soc.db`) is created automatically on first run.
 
 ---
 
-## 4. Database Schema (`app/db.py`)
+## 7. 🧭 Step-by-Step Walkthrough
 
-### `users`
-
-| Column        | Type                     | Notes                      |
-| ------------- | ------------------------ | -------------------------- |
-| id            | INTEGER PK AUTOINCREMENT |                            |
-| name          | TEXT NOT NULL            |                            |
-| email         | TEXT NOT NULL UNIQUE     | lower-cased before storage |
-| password_hash | TEXT NOT NULL            | Werkzeug hash              |
-| created_at    | TEXT NOT NULL            | ISO-8601 UTC               |
-
-### `events`
-
-| Column           | Type                                     | Notes                            |
-| ---------------- | ---------------------------------------- | -------------------------------- |
-| id               | INTEGER PK                               |                                  |
-| user_id          | INTEGER NOT NULL → users(id) CASCADE     |                                  |
-| event_type       | TEXT NOT NULL                            | e.g. `failed_login`, `port_scan` |
-| source_ip        | TEXT                                     | validated IPv4/IPv6              |
-| username         | TEXT                                     | optional                         |
-| destination_port | INTEGER                                  | 1–65535                          |
-| status           | TEXT                                     | optional                         |
-| message          | TEXT                                     | normalized/raw log text          |
-| timestamp        | TEXT NOT NULL                            | ISO-8601 UTC                     |
-
-### `alerts`
-
-| Column              | Type                          | Notes                                  |
-| ------------------- | ----------------------------- | -------------------------------------- |
-| id                  | INTEGER PK                    |                                        |
-| user_id             | INTEGER NOT NULL → users(id)  |                                        |
-| created_at          | TEXT NOT NULL                 |                                        |
-| severity            | TEXT NOT NULL                 | LOW / MEDIUM / HIGH / CRITICAL         |
-| rule_name           | TEXT NOT NULL                 | e.g. `FAILED_LOGIN`, `BRUTE_FORCE`     |
-| title               | TEXT NOT NULL                 |                                        |
-| description         | TEXT                          |                                        |
-| source_ip           | TEXT                          |                                        |
-| mitre_id            | TEXT                          | e.g. `T1110`                           |
-| status              | TEXT NOT NULL DEFAULT `OPEN`  | OPEN / IN_PROGRESS / RESOLVED / CLOSED |
-| threat_intel_match  | INTEGER NOT NULL DEFAULT 0    | boolean flag (migration-added)         |
-| threat_intel_source | TEXT                          | JSON array (migration-added)           |
-| malware_family      | TEXT                          | JSON array (migration-added)           |
-| mitre_attack        | TEXT                          | JSON array (migration-added)           |
-
-### `iocs` (Indicators of Compromise)
-
-| Column                 | Type                          | Notes                                           |
-| ---------------------- | ----------------------------- | ----------------------------------------------- |
-| ioc_id                 | INTEGER PK AUTOINCREMENT      |                                                 |
-| ioc_type               | TEXT NOT NULL                 | ip / domain / url / email / md5 / sha1 / sha256 |
-| value                  | TEXT NOT NULL UNIQUE          | normalized (de-fanged forms merged)             |
-| first_seen / last_seen | TEXT NOT NULL                 |                                                 |
-| status                 | TEXT NOT NULL DEFAULT `ACTIVE`|                                                 |
-| event_count            | INTEGER NOT NULL DEFAULT 1    | number of linked events (migration-added)       |
-
-### `ioc_events` (junction table)
-
-Links `iocs` ↔ `events` ↔ `users` (`ioc_id`, `event_id`, `user_id`, `created_at`), with `UNIQUE(ioc_id, event_id)` and cascading deletes.
-
-### `tickets`
-
-| Column                                     | Type                                     | Notes                                                       |
-| ------------------------------------------ | ---------------------------------------- | ----------------------------------------------------------- |
-| id                                         | INTEGER PK                               |                                                             |
-| ticket_id                                  | TEXT NOT NULL UNIQUE                     | format `SOC-YYYYMMDD-00001` (daily counter)                 |
-| user_id                                    | INTEGER NOT NULL                         |                                                             |
-| alert_id                                   | INTEGER → alerts (ON DELETE SET NULL)    |                                                             |
-| event_id                                   | INTEGER → events (ON DELETE SET NULL)    |                                                             |
-| created_at                                 | TEXT NOT NULL                            |                                                             |
-| title                                      | TEXT NOT NULL                            |                                                             |
-| description                                | TEXT                                     |                                                             |
-| severity                                   | TEXT NOT NULL                            |                                                             |
-| priority                                   | TEXT NOT NULL                            | P1 (CRITICAL) / P2 (HIGH) / P3 (MEDIUM) / P4 (LOW, default) |
-| status                                     | TEXT NOT NULL DEFAULT `OPEN`             |                                                             |
-| assignee                                   | TEXT DEFAULT `SOC Analyst`               |                                                             |
-| source_ip, rule_name, mitre_id, resolution | TEXT                                     |                                                             |
-
-### `auth_failures`
-
-Tracks every failed login attempt (`user_id` is nullable for unknown emails; also stores `attempted_email`, `source_ip`, `attempted_at`). Used for brute-force detection.
-
-### Indexes
-
-`auth_failures(source_ip, attempted_at)`, `auth_failures(attempted_email, attempted_at)`, `events(user_id)`, `events(timestamp)`, `alerts(user_id)`, `alerts(created_at)`, `alerts(rule_name, source_ip, created_at)`, `alerts(threat_intel_match)`, `tickets(user_id)`, `tickets(alert_id)`, `iocs(ioc_type)`, `ioc_events(user_id)`.
-
-### Migrations
-
-`migrate_database()` non-destructively adds new columns (`threat_intel_match`, `threat_intel_source`, `malware_family`, `mitre_attack` on `alerts`; `event_count` on `iocs`) to existing databases without deleting data.
+1. **Register** at `/register`. You are *not* logged in automatically.
+2. **Log in** at `/login`. You land on the input page.
+3. **Submit an event** on `/input`:
+   - Choose an **event type** (Normal Login, Failed Login, Suspicious Login, Port Scan, Network Scan, Malware, Ransomware)
+   - Enter the **source IP** (required, must be a valid IPv4/IPv6 address)
+   - Optionally add **username**, **destination port** (1–65535), **status** (success / failed / suspicious / blocked / malicious) and a **raw log / message**
+4. **Read the result**: the response tells you whether an alert fired, which IOCs were found and whether threat intel matched.
+5. **Open the dashboard** at `/dashboard`:
+   - Summary counters (total / critical / high / medium / open)
+   - Alerts with severity, rule, MITRE ID and threat-intel flag
+   - Extracted IOCs
+   - Tickets, where you can open the ticket details, **write and save your response / resolution notes**, change status and download a PDF
+6. **Write your response to a ticket**: open a ticket on the dashboard, type your findings or the action you took in the **response box**, and click **Save**. Your text is stored with the ticket, shown in its details, and printed in the PDF under *Analyst Response / Resolution*. Writing a response is optional, and you can edit it later.
+7. **Export a report**: `GET /api/report.csv` downloads all your alerts as CSV.
 
 ---
 
-## 5. Authentication (`app/auth.py`)
+## 8. 🧪 Ready-to-Use Test Scenarios
 
-* **Session invalidation on restart:** a random `SERVER_INSTANCE_ID` is generated at process start; any session tagged with an older instance ID is cleared (`reset_stale_session`).
-* **Register** (`GET/POST /register`):
-  * Fields: name, email, password, confirm_password
-  * Validations: name required; email required; password required with **minimum 8 characters**; password must match confirm_password; email must not already exist
-  * Password hashed with Werkzeug (`generate_password_hash`)
-  * Does **not** auto-login — flow is Register → Login → Input → Dashboard
-* **Login** (`GET/POST /login`):
-  * Looks up the user by (lower-cased) email and verifies the password hash
-  * On failure (unknown email or wrong password): records a row in `auth_failures` and checks the brute-force threshold
-  * On success: `session.clear()`, then sets `user_id`, `email`, `name`, `server_instance`
-* **Brute-force detection (auth layer):**
-  * Threshold: **5 failed attempts** from the same `source_ip` within **5 minutes**
-  * On breach: creates a `HIGH` alert with `rule_name = BRUTE_FORCE_LOGIN`, `mitre_id = T1110`
-  * Deduplicated — no second alert for the same IP within the same 5-minute window
-* **Logout** (`GET /logout`): clears the session, flashes a message, redirects to login.
+Use these on the Input page (or via the API) to see each part of the pipeline.
 
----
+### Scenario A: Threat-intel hit raises severity
+| Field       | Value                                   |
+| ----------- | --------------------------------------- |
+| Event type  | `failed_login`                          |
+| Source IP   | `185.220.101.45`                        |
+| Username    | `admin`                                 |
+| Message     | `Failed login for user admin`           |
 
-## 6. Log Analyzer (`app/log_analyzer.py`)
+**Expect:** a `FAILED_LOGIN` alert (normally HIGH) **boosted to CRITICAL** because the IP is a known C2 server in the feed (malware family *DarkComet*), plus a P1 ticket.
 
-Normalizes free-text log lines into structured event fields.
+### Scenario B: Brute-force correlation
+Submit a `failed_login` from the **same IP** (e.g. `10.0.0.5`) **5 times within 5 minutes**.
 
-* **Event type normalization map:**
+**Expect:** each event raises `FAILED_LOGIN`, and the 5th also raises a `BRUTE_FORCE` correlation alert (T1110).
 
-  | Phrase in log                                                | Normalized `event_type`  |
-  | ------------------------------------------------------------ | ------------------------ |
-  | "failed login", "login failed", "invalid password"           | `failed_login`           |
-  | "authentication failure", "authentication failed", "auth failure" | `authentication_failure` |
-  | "port scan", "port scanning", "nmap scan"                    | `port_scan`              |
-  | "network scan"                                               | `network_scan`           |
-  | "malware detected"                                           | `malware_detected`       |
-  | "virus detected" / "trojan detected" / "ransomware detected" | `virus` / `trojan` / `ransomware` |
-  | "suspicious login"                                           | `suspicious_login`       |
-  | "unusual login"                                              | `unusual_login`          |
-  | "login anomaly"                                              | `login_anomaly`          |
+### Scenario C: Port-scan pattern
+Submit `port_scan` events from `10.0.0.9` targeting **5 different destination ports** (22, 80, 443, 3389, 8080).
 
-* **Extraction regexes:**
-  * IP: `\b(?:\d{1,3}\.){3}\d{1,3}\b` (validated with `ipaddress`)
-  * Port: `(?:port\s*[:=]?\s*|:)(\d{1,5})\b` (case-insensitive)
-  * Username: `(?:user|username|account|for)\s*[=:]?\s*([A-Za-z0-9_.@-]+)` (case-insensitive)
+**Expect:** `NETWORK_PORT_SCAN` alerts plus a `PORT_SCAN_PATTERN` correlation alert (T1046).
 
----
+### Scenario D: Malware with IOC extraction
+| Field      | Value                                                                 |
+| ---------- | --------------------------------------------------------------------- |
+| Event type | `malware`                                                             |
+| Source IP  | `192.168.1.20`                                                        |
+| Message    | `Malware detected: trojan beaconing to update-microsoft-security.net` |
 
-## 7. IOC Tracker (`app/ioc_tracker.py`)
+**Expect:** a CRITICAL `MALWARE_DETECTED` alert, a domain IOC, and a threat-intel match (*SocGholish*).
 
-Extracts Indicators of Compromise from event text:
+> Write the domain in its normal form (`.net`). A de-fanged domain typed into the message (`...security[.]net`) is **not** picked up by the IOC extractor; de-fang handling only applies when matching against the feed.
 
-* **IPs** — IPv4 regex + validity check
-* **Domains** — generic domain regex
-* **URLs** — `http(s)://...`
-* **Emails** — standard email regex
-* **File hashes** — MD5 (32 hex), SHA1 (40 hex), SHA256 (64 hex)
+### Scenario E: Hash match
+Message: `File hash 5d41402abc4b2a76b9719d911017c592 flagged on host`
+**Expect:** an MD5 IOC matched against *LockBit* in the feed.
 
-IOCs are de-duplicated, linked to the originating event/user (`ioc_events`), and each IOC's `event_count` is kept up to date.
+### Scenario F: De-duplication
+Submit the *exact same* event twice within 5 minutes. **Expect:** the second submission reuses the existing alert instead of creating a duplicate.
+
+### Scenario G: Login brute force against the app itself
+Enter a wrong password on the login page **5 times within 5 minutes**.
+**Expect:** a HIGH `BRUTE_FORCE_LOGIN` alert (T1110) is raised for that IP.
 
 ---
 
-## 8. Threat Intelligence (`app/threat_intel.py`, `data/threat_intel.json`)
+## 9. ⚙️ How It Works (Pipeline)
 
-* Local static feed: a `threat_intelligence` metadata block plus an `indicators` array of **12 sample indicators**. Fields per indicator: `id`, `type`, `value`, `indicator_type`, `category`, `threat_type`, `malware_family`, `threat_actor`, `severity`, `confidence`, `risk_score`, `reputation`, `country`, `asn`, `first_seen`, `last_seen`, `status`, `mitre_attack[]`, `tags[]`, `description`.
-* **`normalize_ioc_value()`** — treats de-fanged IOCs as equivalent to real ones (`[.]`, `(.)`, `[dot]` → `.`)
-* **`enrich_iocs(iocs)`** — matches extracted IOCs against the feed by normalized value
-* **`boost_severity(current_severity, matches)`** — raises an alert's severity if a matched indicator has a higher severity rank (`LOW=1, MEDIUM=2, HIGH=3, CRITICAL=4`)
-* Helpers `get_sources()`, `get_malware_families()` and `get_mitre_attack()` collect the matched metadata that is attached to alerts.
+```
+        Raw log or form input
+                 │
+                 ▼
+   ┌──────────────────────────┐
+   │ 1. Log Analyzer          │  normalizes event type, extracts IP / port / username
+   └────────────┬─────────────┘
+                ▼
+   ┌──────────────────────────┐
+   │ 2. IOC Tracker           │  IPs, domains, URLs, emails, MD5/SHA1/SHA256
+   └────────────┬─────────────┘
+                ▼
+   ┌──────────────────────────┐
+   │ 3. Threat Intel          │  match against feed, de-fang aware
+   └────────────┬─────────────┘
+                ▼
+   ┌──────────────────────────┐
+   │ 4. Detection Engine      │  8 event rules + brute-force & port-scan correlation
+   └────────────┬─────────────┘
+                ▼
+   ┌──────────────────────────┐
+   │ 5. Enrich + Deduplicate  │  boost severity, SHA-256 fingerprint, 5-min window
+   └────────────┬─────────────┘
+                ▼
+   ┌──────────────────────────┐
+   │ 6. Ticketing             │  SOC-YYYYMMDD-00001, priority P1–P4
+   └────────────┬─────────────┘
+                ▼
+        Dashboard · API · PDF · CSV
+```
 
----
+**Event type normalization examples**
 
-## 9. Detection Engine (`app/detection.py`)
-
-Runs **8 event-level rules**; any number of them can fire on a single event:
-
-| Rule (`rule_name`)    | Trigger keywords / event_type                                                       | Severity | MITRE ATT&CK |
-| --------------------- | ----------------------------------------------------------------------------------- | -------- | ------------ |
-| `FAILED_LOGIN`        | `event_type == failed_login` or "failed login" in message                           | HIGH     | T1110        |
-| `BRUTE_FORCE`         | `event_type == brute_force` or "brute force" in message                             | HIGH     | T1110        |
-| `NETWORK_PORT_SCAN`   | "scan" in event_type, or "port scan" / "network scan" in message                    | HIGH     | T1046        |
-| `MALWARE_DETECTED`    | malware-related keywords (malware, trojan, ransomware, virus, malicious) in message | CRITICAL | T1204        |
-| `UNAUTHORIZED_ACCESS` | "unauthorized" in message/status, or "intrusion" in message                         | CRITICAL | T1078        |
-| `EXPLOIT_ACTIVITY`    | "exploit" in message/event_type                                                     | CRITICAL | T1190        |
-| `PHISHING_ACTIVITY`   | "phishing" in message                                                               | HIGH     | T1566        |
-| `SUSPICIOUS_LOGIN`    | `suspicious_login` in event_type, or "suspicious login" / "multiple login" in message | MEDIUM | T1078        |
-
-**Correlation rules** (run against the user's recent events):
-
-* **`detect_brute_force`** — 5+ `failed_login` events from the same source IP within a rolling 5-minute window → HIGH alert (`BRUTE_FORCE`, T1110)
-* **`detect_port_scan`** — 5+ unique destination ports from the same source IP → HIGH alert (`PORT_SCAN_PATTERN`, T1046)
-
-**Pipeline per submitted event** (`POST /api/events` in `app/routes.py`, using `process_event` from `app/detection.py`):
-
-1. Parse the submitted fields and normalize them with the log analyzer
-2. Extract IOCs and enrich them with threat intelligence
-3. Run all 8 event-level rules → 0..N alerts
-4. Pull the user's recent event history and run the brute-force and port-scan correlations
-5. De-duplicate alerts with the same `(rule_name, source_ip)` within the batch
-6. If nothing fired → return `detected: False`
-7. Enrich each alert with threat-intel matches (may raise severity, attach `malware_family`, `mitre_attack`, `threat_intel_source`)
-8. **Deduplication against DB history:** a SHA-256 fingerprint is built per alert:
-   * Correlation alerts (`BRUTE_FORCE`, `PORT_SCAN_PATTERN`): `user + rule + source_ip`
-   * Other alerts: `user + rule + source_ip + event_type + username + destination_port + message`
-   * If a matching alert already exists within the last **5 minutes**, it is not re-inserted and the existing alert ID is reused
-9. Each new (non-duplicate) alert automatically creates a SOC ticket
-10. The response contains both the legacy single-alert shape (`alert`, `alert_id`, `ticket`) and the multi-alert shape (`alerts[]`, `alert_ids[]`, `tickets[]`)
+| Phrase in the log                                   | Becomes                  |
+| --------------------------------------------------- | ------------------------ |
+| "failed login", "login failed", "invalid password"  | `failed_login`           |
+| "authentication failure", "auth failure"            | `authentication_failure` |
+| "port scan", "nmap scan"                            | `port_scan`              |
+| "malware detected"                                  | `malware_detected`       |
+| "suspicious login"                                  | `suspicious_login`       |
 
 ---
 
-## 10. Ticketing (`app/ticketing.py`)
+## 10. 🎯 Detection Rules
 
-* **Ticket ID format:** `SOC-YYYYMMDD-00001` — a daily auto-incrementing counter per date
-* **Priority mapping from severity:** CRITICAL → P1, HIGH → P2, MEDIUM → P3, LOW → P4 (default P4 if unknown)
-* **Default assignee:** `SOC Analyst`
-* **Ticket statuses:** `OPEN`, `IN_PROGRESS`, `RESOLVED`, `CLOSED`
-* **PDF export** (`generate_ticket_pdf`) — built with ReportLab (`SimpleDocTemplate`, A4 page), includes a header (`SOC INCIDENT TICKET — <ticket_id>`) and a details table; values are safely escaped and `NULL` fields render as `-`
+### Event-level rules (any number can fire on a single event)
+
+| Rule                  | Triggers on                                                    | Severity | MITRE  |
+| --------------------- | -------------------------------------------------------------- | -------- | ------ |
+| `FAILED_LOGIN`        | event type `failed_login` or "failed login" in message        | HIGH     | T1110  |
+| `BRUTE_FORCE`         | event type `brute_force` or "brute force" in message          | HIGH     | T1110  |
+| `NETWORK_PORT_SCAN`   | "scan" in event type, or "port scan" / "network scan" in message | HIGH  | T1046  |
+| `MALWARE_DETECTED`    | malware, trojan, ransomware, virus, malicious in message      | CRITICAL | T1204  |
+| `UNAUTHORIZED_ACCESS` | "unauthorized" in message/status, or "intrusion" in message   | CRITICAL | T1078  |
+| `EXPLOIT_ACTIVITY`    | "exploit" in message or event type                            | CRITICAL | T1190  |
+| `PHISHING_ACTIVITY`   | "phishing" in message                                         | HIGH     | T1566  |
+| `SUSPICIOUS_LOGIN`    | `suspicious_login`, "suspicious login" or "multiple login"    | MEDIUM   | T1078  |
+
+### Correlation rules (look across recent events)
+
+| Rule                | Condition                                                     | Severity | MITRE |
+| ------------------- | ------------------------------------------------------------- | -------- | ----- |
+| `BRUTE_FORCE`       | 5+ `failed_login` events from one IP within 5 minutes         | HIGH     | T1110 |
+| `PORT_SCAN_PATTERN` | 5+ unique destination ports from one IP                       | HIGH     | T1046 |
+
+### Severity → ticket priority
+
+| Severity | Priority |
+| -------- | -------- |
+| CRITICAL | P1       |
+| HIGH     | P2       |
+| MEDIUM   | P3       |
+| LOW      | P4       |
 
 ---
 
-## 11. Web Pages / Templates (`templates/`)
+## 11. 🌐 Threat Intelligence Feed
 
-| Route                | Template         | Auth required / notes                  |
-| -------------------- | ---------------- | -------------------------------------- |
-| `GET /`              | —                | Redirects to `/login`                  |
-| `GET/POST /register` | `register.html`  | No                                     |
-| `GET/POST /login`    | `login.html`     | No                                     |
-| `GET /logout`        | —                | Clears the session, redirects to login |
-| `GET /input`         | `input.html`     | Yes — event submission form            |
-| `GET /dashboard`     | `dashboard.html` | Yes — stats, alerts, IOCs, tickets     |
+The feed lives in `data/threat_intel.json` and is a **simulated** local file with 12 sample indicators (IPs, domains, URLs and hashes) carrying malware family, severity, confidence, risk score and MITRE techniques.
+
+| ID      | Type   | Indicator                          | Severity | Family / Category      |
+| ------- | ------ | ---------------------------------- | -------- | ---------------------- |
+| TI-0001 | IP     | `185.220.101.45`                   | CRITICAL | DarkComet (C2)         |
+| TI-0002 | Domain | `secure-login-check[.]com`         | HIGH     | Phishing               |
+| TI-0003 | Hash   | `44d88612fea8a8f36de82e1278abb02f` | CRITICAL | AgentTesla             |
+| TI-0004 | IP     | `103.216.221.17`                   | HIGH     | Brute force            |
+| TI-0005 | Domain | `update-microsoft-security[.]net`  | HIGH     | SocGholish             |
+| TI-0006 | Hash   | `5d41402abc4b2a76b9719d911017c592` | CRITICAL | LockBit                |
+| TI-0007 | URL    | `http://login-verification[.]info/account` | HIGH | Phishing         |
+| TI-0008 | IP     | `45.155.205.233`                   | MEDIUM   | Scanning               |
+| TI-0009 | Domain | `cloud-storage-auth[.]org`         | HIGH     | Phishing               |
+| TI-0010 | Hash   | `9e107d9d372bb6826bd81d3542a419d6` | HIGH     | Remcos                 |
+| TI-0011 | IP     | `91.240.118.172`                   | HIGH     | Mirai                  |
+| TI-0012 | Domain | `invoice-document-download[.]com`  | CRITICAL | QakBot                 |
+
+**What a match does:** the alert is flagged `threat_intel_match`, gets the matched sources, malware families and ATT&CK techniques attached, and its severity is raised if the indicator's severity is higher.
+
+**Add your own:** append an object to the `indicators` array in `data/threat_intel.json` using the same fields, then restart the app.
 
 ---
 
-## 12. REST API (`app/routes.py`)
+## 12. 🎫 Tickets & Reports
 
-All API endpoints require an authenticated session (`login_required()` → redirect to login if missing) and are scoped to `user_id = session["user_id"]`.
+- **ID format:** `SOC-YYYYMMDD-00001` (counter resets daily)
+- **Created automatically** for every new, non-duplicate alert
+- **Default assignee:** `SOC Analyst`
+- **Statuses:** `OPEN` → `IN_PROGRESS` → `RESOLVED` → `CLOSED`
+- **Update status:** `PATCH /api/tickets/<id>` with `{"status": "RESOLVED"}`
+- **User response / resolution notes:** the user can write their own response on any ticket. Send it in the same PATCH: `{"status": "RESOLVED", "resolution": "Blocked 185.220.101.45 on the firewall and reset the admin password."}`
+  - Optional; max **10,000 characters**
+  - `status` is still required in the request. The dashboard resends the ticket's current status when you only save a response
+  - If `resolution` is omitted, the existing response is left unchanged; an empty string clears it
+- **PDF:** `GET /api/tickets/<id>/pdf` returns an A4 report titled *SOC INCIDENT TICKET*, including the **Analyst Response / Resolution** section
+- **CSV:** `GET /api/report.csv` exports all of your alerts
 
-### Summary
+---
 
-* `GET /api/summary` → `{total, critical, high, medium, open}` alert counts for the current user
+## 13. 🔌 REST API Reference
 
-### Events
+All endpoints require a logged-in session and only return **your** data. Because CSRF protection is on, state-changing requests (POST/PATCH) from outside the browser need a valid CSRF token and session cookie.
 
-* `GET /api/events` — filters: `event_type`, `source_ip`, `status`, `username`; supports pagination
-* `POST /api/events` — body: `event_type` (required), `source_ip` (required, validated IP), `username`, `destination_port` (1–65535), `raw_log` / `message`. Runs the full pipeline: log analysis → IOC extraction → threat-intel enrichment → detection → ticket creation. Returns `201` with `event_id`, `detected`, `alert_id`, `alert`, `ticket`, `alert_ids[]`, `alerts[]`, `tickets[]`, `ioc_count`, `iocs[]`, `threat_intel_matches[]`, `threat_intel_match_count`.
+### Endpoints
 
-### Alerts
+| Method | Endpoint                  | Description                                   |
+| ------ | ------------------------- | --------------------------------------------- |
+| GET    | `/api/summary`            | `{total, critical, high, medium, open}`       |
+| GET    | `/api/events`             | List events. Filters: `event_type`, `source_ip`, `status`, `username` |
+| POST   | `/api/events`             | Submit an event and run the full pipeline     |
+| GET    | `/api/alerts`             | List alerts. Filters: `severity`, `status`, `rule_name`, `source_ip` |
+| GET    | `/api/alerts/<id>`        | One alert (404 if not yours)                  |
+| GET    | `/api/iocs`               | List IOCs. Filters: `ioc_type`, `status`, `value` |
+| GET    | `/api/iocs/summary`       | Counts by type                                |
+| GET    | `/api/tickets`            | List tickets. Filters: `status`, `severity`, `priority`, `assignee` |
+| GET    | `/api/tickets/<id>`       | One ticket                                    |
+| PATCH  | `/api/tickets/<id>`       | Update ticket status and/or write the analyst response (`resolution`) |
+| GET    | `/api/tickets/<id>/pdf`   | Download ticket PDF                           |
+| GET    | `/api/report.csv`         | Download alerts CSV                           |
 
-* `GET /api/alerts` — filters: `severity`, `status`, `rule_name`, `source_ip`; paginated
-* `GET /api/alerts/<id>` — single alert (404 if not found / not owned by the user)
+### Submit an event: request
 
-### IOCs
+```json
+POST /api/events
+{
+  "event_type": "failed_login",
+  "source_ip": "185.220.101.45",
+  "username": "admin",
+  "destination_port": 22,
+  "raw_log": "Failed login for user admin"
+}
+```
 
-* `GET /api/iocs` — filters: `ioc_type`, `status`, `value`; paginated
-* `GET /api/iocs/summary` — counts by type: `{total, ip, domain, url, email, md5, sha1, sha256}`
+### Response (`201 Created`, abridged, example values)
 
-### Tickets
+```json
+{
+  "event_id": 12,
+  "detected": true,
+  "alert_id": 7,
+  "alerts": [{ "rule_name": "FAILED_LOGIN", "severity": "CRITICAL", "mitre_id": "T1110" }],
+  "tickets": [{ "ticket_id": "SOC-20261008-00003", "priority": "P1" }],
+  "ioc_count": 1,
+  "threat_intel_match_count": 1
+}
+```
 
-* `GET /api/tickets` — filters: `status`, `severity`, `priority`, `assignee`; paginated
-* `GET /api/tickets/<id>` — single ticket
-* `PATCH /api/tickets/<id>` — update `status`; must be one of `OPEN`, `IN_PROGRESS`, `RESOLVED`, `CLOSED` (400 otherwise)
-* `GET /api/tickets/<id>/pdf` — download the ticket as a PDF (`Content-Disposition: attachment`)
+### Pagination
 
-### Reporting
-
-* `GET /api/report.csv` — download all of the user's alerts as CSV
-
-### Pagination convention (`/api/alerts`, `/api/events`, `/api/iocs`, `/api/tickets`)
-
-* Backward-compatible: with **no** `page` / `per_page` / filter query params, the endpoint returns a plain JSON array
-* With `page`, `per_page`, or any filter param present, it returns:
+- With **no** `page`/`per_page`/filter parameters, list endpoints return a plain JSON array (backward compatible).
+- With any of them, you get:
 
 ```json
 {
   "items": [],
-  "pagination": {
-    "page": 1,
-    "per_page": 25,
-    "total": 42,
-    "pages": 2,
-    "has_next": true,
-    "has_previous": false
-  }
+  "pagination": { "page": 1, "per_page": 25, "total": 42, "pages": 2, "has_next": true, "has_previous": false }
 }
 ```
 
-* `page` defaults to 1 (minimum 1); `per_page` defaults to 25 (clamped to 1–100)
+`page` defaults to 1; `per_page` defaults to 25 and is capped at 100.
 
 ---
 
-## 13. Security Measures
+## 14. 🔧 Configuration
 
-* Session cookies: `HttpOnly`, `SameSite=Lax`, optional `Secure` flag for HTTPS
-* CSRF protection via Flask-WTF
-* Passwords hashed with Werkzeug (never stored in plaintext)
-* Server-restart session invalidation (prevents stale sessions across restarts)
-* Rate limiting: 200 requests/day and 50/hour per IP by default
-* Brute-force detection at both the **auth layer** (`auth.py`) and the **detection engine** (`detection.py`, via correlation on `failed_login` events)
-* Input validation: IP format (`ipaddress` module), port range (1–65535), required fields
-* All data access is scoped per `user_id` — no cross-user data leakage
-* `.env` and `soc.db` / `*.sqlite*` are excluded from git via `.gitignore`
+| Variable                | Default      | Description                                              |
+| ----------------------- | ------------ | -------------------------------------------------------- |
+| `SECRET_KEY`            | **required** | Signs sessions/CSRF tokens. Use a long random value      |
+| `FLASK_DEBUG`           | `false`      | Debug mode. **Never enable in production**               |
+| `FLASK_HOST`            | `0.0.0.0`    | Bind address. Use `127.0.0.1` for local-only access      |
+| `PORT`                  | `5000`       | Port to listen on                                        |
+| `SESSION_COOKIE_SECURE` | `false`      | Set `true` when serving over HTTPS                       |
 
----
-
-## 14. Testing (`tests/`)
-
-* `test_detection.py` — detection rule/engine tests
-* `test_iocs_tracker.py` — IOC extraction tests
-* `test_log_analyzer.py` — log normalization tests
-* Run with `pytest` (config in `pytest.ini`)
+Fixed in code: session lifetime **1 hour**, default rate limit **200/day and 50/hour per IP**.
 
 ---
 
-## 15. Getting Started
+## 15. 🗄️ Database Overview
 
-```bash
-# 1. Clone and enter the project
-git clone <your-repo-url>
-cd SentinelSOC
+SQLite file `soc.db`, auto-created and auto-migrated at startup (new columns are added without deleting data).
 
-# 2. Create a virtual environment and install dependencies
-python -m venv venv
-source venv/bin/activate   # Windows: venv\Scripts\activate
-pip install -r requirements.txt
+| Table           | Purpose                                                          |
+| --------------- | ---------------------------------------------------------------- |
+| `users`         | Accounts (email lower-cased, hashed password)                    |
+| `events`        | Submitted/normalized events                                      |
+| `alerts`        | Alerts with severity, rule, MITRE ID and threat-intel metadata   |
+| `iocs`          | Unique indicators with first/last seen and event count           |
+| `ioc_events`    | Links IOCs ↔ events ↔ users                                      |
+| `tickets`       | Incident tickets linked to alerts/events                         |
+| `auth_failures` | Failed login attempts, used for login brute-force detection      |
 
-# 3. Configure environment variables
-cp .env.example .env
-python -c "import secrets; print(secrets.token_hex(32))"   # paste output into SECRET_KEY in .env
-
-# 4. Run
-python run.py
-```
-
-Then open `http://127.0.0.1:5000`, register an account, log in, and submit a log on the Input page to see the pipeline (analysis → IOCs → threat intel → alerts → tickets) in action on the Dashboard.
-
-For production, run with gunicorn, e.g. `gunicorn run:app`, and set `SESSION_COOKIE_SECURE=true` when serving over HTTPS.
+To start fresh, stop the app and delete `soc.db`.
 
 ---
 
-## 16. Screenshots
-
-### 16.1 Register Page
-
-<img width="1920" height="1080" alt="Screenshot (335)" src="https://github.com/user-attachments/assets/2ac73541-4dcb-46e1-9a06-cc6e57ce705e" />
-
-### 16.2 Login Page
-
-<img width="1920" height="1080" alt="Screenshot (334)" src="https://github.com/user-attachments/assets/c5708d59-5e5b-4864-b533-95c40262a824" />
-
-### 16.3 Input / Event Submission Page
-
-<img width="1920" height="1080" alt="Screenshot (337)" src="https://github.com/user-attachments/assets/2ace16fc-a61b-4bcd-8875-08a7d37aacb0" />
-
-### 16.4 Dashboard
-
-<img width="1920" height="712" alt="Screenshot (338)" src="https://github.com/user-attachments/assets/a7e94ee4-7f4f-4c8f-ac7f-d886c2d3bb38" />
-<img width="1920" height="858" alt="Screenshot (339)" src="https://github.com/user-attachments/assets/9ac02fb3-e284-4dd0-b306-bfc577dac7e7" />
-<img width="1920" height="972" alt="Screenshot (340)" src="https://github.com/user-attachments/assets/18b7dbce-df7b-4de7-9f2e-37170e72300e" />
-
-### 16.5 PDF Ticket
-
-<img width="984" height="1080" alt="Screenshot (343)" src="https://github.com/user-attachments/assets/bd3bcd86-d8bd-4de9-ad7f-8a50d777fa66" />
-
----
-
-## 17. Project File Map
+## 16. 📁 Project Structure
 
 ```
 SentinelSOC/
 ├── app/
-│   ├── __init__.py       (137 lines)  – app factory, config, extensions
-│   ├── auth.py           (629 lines)  – register/login/logout, brute-force detection
-│   ├── db.py             (509 lines)  – schema, migrations, connection handling
-│   ├── detection.py      (1244 lines) – 8 detection rules + correlation + dedup
-│   ├── ioc_tracker.py    (345 lines)  – IOC regex extraction
-│   ├── log_analyzer.py   (449 lines)  – raw log normalization
-│   ├── routes.py         (1553 lines) – page routes + REST API
-│   ├── threat_intel.py   (470 lines)  – threat feed matching, severity boosting
-│   └── ticketing.py      (625 lines)  – ticket creation + PDF export
-├── templates/            – login.html, register.html, input.html, dashboard.html
-├── data/threat_intel.json – local simulated threat intel feed (12 indicators)
-├── tests/                – pytest suite
-├── run.py                – entry point (host/port/debug from env)
+│   ├── __init__.py        # app factory, config, CSRF, rate limiter
+│   ├── auth.py            # register / login / logout, login brute-force alerts
+│   ├── routes.py          # page routes + REST API
+│   ├── log_analyzer.py    # log normalization
+│   ├── ioc_tracker.py     # IOC extraction
+│   ├── threat_intel.py    # feed matching, de-fanging, severity boost
+│   ├── detection.py       # detection + correlation rules, deduplication
+│   ├── ticketing.py       # ticket creation + PDF export
+│   └── db.py              # schema, indexes, migrations
+├── data/
+│   └── threat_intel.json  # simulated threat feed
+├── templates/             # login, register, input, dashboard
+├── tests/                 # test_detection, test_log_analyzer, test_iocs_tracker
+├── run.py                 # entry point
 ├── requirements.txt
 ├── pytest.ini
 ├── .env.example
 └── .gitignore
 ```
+
+---
+
+## 17. 🔐 Security Measures
+
+- Passwords hashed with Werkzeug (never stored in plaintext)
+- Session cookies: `HttpOnly`, `SameSite=Lax`, optional `Secure`
+- Global CSRF protection (Flask-WTF)
+- Rate limiting (Flask-Limiter)
+- Sessions invalidated on server restart and expire after 1 hour
+- Input validation for IP format, port range and required fields
+- Strict per-user data isolation on every query
+- `.env`, `soc.db` and `*.sqlite*` are git-ignored
+
+---
+
+## 18. ✅ Testing
+
+```bash
+pytest            # run everything
+pytest -v         # verbose
+pytest tests/test_detection.py
+```
+
+| File                    | Covers                          |
+| ----------------------- | ------------------------------- |
+| `test_detection.py`     | Detection rules and engine      |
+| `test_iocs_tracker.py`  | IOC extraction                  |
+| `test_log_analyzer.py`  | Log normalization               |
+
+---
+
+## 19. 🚢 Deployment
+
+```bash
+gunicorn run:app --bind 0.0.0.0:8000
+```
+
+Checklist:
+
+- [ ] Fresh, random `SECRET_KEY`
+- [ ] `FLASK_DEBUG=false`
+- [ ] `SESSION_COOKIE_SECURE=true` and HTTPS in front
+- [ ] Reverse proxy (nginx/Caddy) configured to forward the real client IP, otherwise rate limiting and IP logging may see only the proxy's address
+- [ ] `.env` and `soc.db` **not** committed or shared
+- [ ] Regular backups of `soc.db`
+
+---
+
+## 20. 🩹 Troubleshooting
+
+| Problem                                               | Fix                                                                 |
+| ----------------------------------------------------- | ------------------------------------------------------------------- |
+| `RuntimeError: SECRET_KEY environment variable is required` | Create `.env` from `.env.example` and set `SECRET_KEY`          |
+| `ModuleNotFoundError`                                 | Activate the virtualenv and run `pip install -r requirements.txt`   |
+| Logged out after restarting the server                | Expected: sessions are invalidated on restart                       |
+| `429 Too Many Requests`                               | Rate limit hit (50/hour, 200/day). Wait, or raise limits in `app/__init__.py` |
+| Port already in use                                   | Set a different `PORT` in `.env`                                    |
+| "Invalid IP" when submitting an event                 | Use a valid IPv4/IPv6 address such as `10.0.0.5`                    |
+| 400 CSRF error on API POST/PATCH                      | Send the CSRF token with the request; the web UI does this for you  |
+| Want to reset all data                                | Stop the app and delete `soc.db`                                    |
+| No alert fired                                        | The event matched no rule; try wording such as "failed login" or "malware detected" |
+
+---
+
+
+
+## 📄 License
+
+Add a license of your choice (MIT is common for portfolio projects).
