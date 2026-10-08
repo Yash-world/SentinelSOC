@@ -582,14 +582,14 @@ def generate_ticket_pdf(ticket):
 
     story.append(
         Paragraph(
-            "Resolution / Analyst Notes",
+            "Analyst Response / Resolution",
             heading_style
         )
     )
 
     resolution = safe_value(
         ticket.get("resolution")
-    )
+    ).replace("\n", "<br/>")
 
     story.append(
         Paragraph(
