@@ -25,6 +25,37 @@ from .ticketing import generate_ticket_pdf
 bp = Blueprint("main", __name__)
 
 
+# Event types accepted by the Input page / API.
+# The selected event type is authoritative for detection;
+# message text is used for enrichment/IOC extraction, not
+# to silently change the security category.
+ALLOWED_EVENT_TYPES = {
+    "login",
+    "failed_login",
+    "suspicious_login",
+    "port_scan",
+    "network_scan",
+    "malware",
+    "ransomware",
+    "brute_force",
+    "phishing",
+    "exploit",
+    "unauthorized_access",
+    "intrusion",
+}
+
+EVENT_TYPE_ALIASES = {
+    "login_failed": "failed_login",
+    "authentication_failure": "failed_login",
+    "auth_failure": "failed_login",
+    "nmap_scan": "port_scan",
+    "scan": "port_scan",
+    "malware_detected": "malware",
+    "virus": "malware",
+    "trojan": "malware",
+}
+
+
 # ============================================================
 # AUTH HELPERS
 # ============================================================
@@ -694,7 +725,14 @@ def create_event():
             "event_type",
             ""
         )
-    ).strip()
+    ).strip().lower()
+
+    # Normalize only the explicit event-type selection.
+    # Do not infer a different detection category from message text.
+    event_type = EVENT_TYPE_ALIASES.get(
+        event_type,
+        event_type,
+    )
 
     source_ip = str(
         data.get(
@@ -725,6 +763,12 @@ def create_event():
     if not event_type:
         return jsonify({
             "error": "event_type is required"
+        }), 400
+
+    if event_type not in ALLOWED_EVENT_TYPES:
+        return jsonify({
+            "error": "Unsupported event_type",
+            "allowed": sorted(ALLOWED_EVENT_TYPES),
         }), 400
 
     if not source_ip:
@@ -772,11 +816,15 @@ def create_event():
             }), 400
 
     event = {
+        # Keep the user's explicit selection authoritative.
         "event_type": event_type,
         "source_ip": source_ip,
         "username": username,
         "destination_port": destination_port,
+        "status": str(data.get("status", "")).strip().lower(),
+        "message": raw_log,
         "raw_log": raw_log,
+        "timestamp": data.get("timestamp"),
     }
 
     # --------------------------------------------------------
@@ -798,10 +846,17 @@ def create_event():
     if isinstance(log_analysis, dict):
         event.update(log_analysis)
 
-    event_type = str(event.get("event_type", event_type)).strip()
+    # analyze_log can infer an event type from message keywords. That is
+    # useful for raw-log parsing, but it must not override the explicit
+    # event type selected by the user in this authenticated input flow.
+    event["event_type"] = event_type
+
     source_ip = str(event.get("source_ip", source_ip)).strip()
     username = str(event.get("username", username)).strip()
     destination_port = event.get("destination_port", destination_port)
+    event["status"] = str(
+        data.get("status", event.get("status", ""))
+    ).strip().lower()
 
     # --------------------------------------------------------
     # INSERT EVENT
@@ -809,9 +864,12 @@ def create_event():
 
     db = get_db()
 
-    timestamp = datetime.now(
-        timezone.utc
-    ).isoformat()
+    timestamp = event.get("timestamp")
+
+    if not timestamp:
+        timestamp = datetime.now(
+            timezone.utc
+        ).isoformat()
 
     cursor = db.execute(
         """
@@ -900,6 +958,10 @@ def create_event():
     # --------------------------------------------------------
     # DETECTION ENGINE
     # --------------------------------------------------------
+
+    # Final guard: detection must see the explicit event type, even if
+    # an analyzer or enrichment layer added message-derived metadata.
+    event["event_type"] = event_type
 
     detection_result = process_event(
         event,
