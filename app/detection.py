@@ -64,10 +64,7 @@ def _rule_failed_login(event):
         event.get("message", "")
     ).strip().lower()
 
-    if (
-        event_type == "failed_login"
-        or "failed login" in message
-    ):
+    if event_type in {"failed_login", "login_failed", "authentication_failure", "auth_failure"}:
         return _base_alert(
             "HIGH",
             "FAILED_LOGIN",
@@ -89,10 +86,7 @@ def _rule_brute_force_event(event):
         event.get("message", "")
     ).strip().lower()
 
-    if (
-        event_type == "brute_force"
-        or "brute force" in message
-    ):
+    if event_type in {"brute_force", "brute_force_login"}:
         return _base_alert(
             "HIGH",
             "BRUTE_FORCE",
@@ -114,11 +108,7 @@ def _rule_port_scan(event):
         event.get("message", "")
     ).strip().lower()
 
-    if (
-        "scan" in event_type
-        or "port scan" in message
-        or "network scan" in message
-    ):
+    if event_type in {"port_scan", "network_scan", "scan", "reconnaissance"}:
         return _base_alert(
             "HIGH",
             "NETWORK_PORT_SCAN",
@@ -132,22 +122,21 @@ def _rule_port_scan(event):
 
 
 def _rule_malware(event):
+    event_type = str(
+        event.get("event_type", "")
+    ).strip().lower()
+
     message = str(
         event.get("message", "")
     ).strip().lower()
 
-    malware_keywords = [
+    if event_type in {
         "malware",
+        "malware_detected",
+        "virus",
         "trojan",
         "ransomware",
-        "virus",
-        "malicious",
-    ]
-
-    if any(
-        keyword in message
-        for keyword in malware_keywords
-    ):
+    }:
         return _base_alert(
             "CRITICAL",
             "MALWARE_DETECTED",
@@ -161,6 +150,10 @@ def _rule_malware(event):
 
 
 def _rule_unauthorized_access(event):
+    event_type = str(
+        event.get("event_type", "")
+    ).strip().lower()
+
     status = str(
         event.get("status", "")
     ).strip().lower()
@@ -169,11 +162,11 @@ def _rule_unauthorized_access(event):
         event.get("message", "")
     ).strip().lower()
 
-    if (
-        "unauthorized" in message
-        or "unauthorized" in status
-        or "intrusion" in message
-    ):
+    if event_type in {
+        "unauthorized_access",
+        "unauthorized",
+        "intrusion",
+    } or status in {"unauthorized", "intrusion"}:
         return _base_alert(
             "CRITICAL",
             "UNAUTHORIZED_ACCESS",
@@ -195,10 +188,10 @@ def _rule_exploit(event):
         event.get("message", "")
     ).strip().lower()
 
-    if (
-        "exploit" in message
-        or "exploit" in event_type
-    ):
+    if event_type in {
+        "exploit",
+        "exploit_activity",
+    }:
         return _base_alert(
             "CRITICAL",
             "EXPLOIT_ACTIVITY",
@@ -212,11 +205,15 @@ def _rule_exploit(event):
 
 
 def _rule_phishing(event):
+    event_type = str(
+        event.get("event_type", "")
+    ).strip().lower()
+
     message = str(
         event.get("message", "")
     ).strip().lower()
 
-    if "phishing" in message:
+    if event_type in {"phishing", "phishing_activity"}:
         return _base_alert(
             "HIGH",
             "PHISHING_ACTIVITY",
@@ -238,11 +235,11 @@ def _rule_suspicious_login(event):
         event.get("message", "")
     ).strip().lower()
 
-    if (
-        "suspicious_login" in event_type
-        or "suspicious login" in message
-        or "multiple login" in message
-    ):
+    if event_type in {
+        "suspicious_login",
+        "unusual_login",
+        "login_anomaly",
+    }:
         return _base_alert(
             "MEDIUM",
             "SUSPICIOUS_LOGIN",
@@ -287,6 +284,10 @@ def detect_event_rules(event):
     if not isinstance(event, dict):
         return []
 
+    # IMPORTANT: the explicitly selected event_type is authoritative.
+    # A log message containing words such as "failed login", "malicious",
+    # or "malware" must NOT create unrelated alerts when the user selected
+    # another event type (for example, port_scan).
     source_ip = _valid_source_ip(
         event.get("source_ip")
     )
