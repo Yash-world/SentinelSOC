@@ -1,0 +1,976 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="csrf-token" content="{{ csrf_token() }}">
+
+  <title>SentinelSOC · Connector Management</title>
+
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #080c16;
+      --panel: #111827;
+      --panel2: #0b1220;
+      --line: #263246;
+      --text: #edf4ff;
+      --muted: #9aabc2;
+      --cyan: #45d9ee;
+      --green: #45d7a0;
+      --red: #ff7888;
+      --yellow: #ffd479;
+      --blue: #779aff;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background: radial-gradient(
+        ellipse at top left, #13283a, var(--bg) 55%
+      );
+      font: 14px/1.6 Inter, "Segoe UI", sans-serif;
+      color: var(--text);
+    }
+
+    main {
+      max-width: 1250px;
+      margin: auto;
+      padding: 30px 22px 65px;
+    }
+
+    h1, h2, h3, p { margin-top: 0; }
+
+    h1 {
+      font-size: 29px;
+      margin-bottom: 5px;
+    }
+
+    h2 {
+      font-size: 19px;
+      margin-bottom: 8px;
+    }
+
+    h3 {
+      font-size: 15px;
+      margin-bottom: 10px;
+    }
+
+    .muted { color: var(--muted); }
+    .small { font-size: 12px; }
+    .break { overflow-wrap: anywhere; }
+
+    .top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 18px;
+    }
+
+    .nav {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 9px;
+    }
+
+    a, button {
+      font: inherit;
+      cursor: pointer;
+    }
+
+    a {
+      color: var(--cyan);
+      text-decoration: none;
+    }
+
+    .nav a, .btn {
+      padding: 9px 13px;
+      border-radius: 9px;
+      border: 1px solid #285266;
+      background: #10202d;
+      color: var(--cyan);
+      display: inline-block;
+    }
+
+    .nav a:hover { background: #183347; }
+
+    .btn {
+      background: linear-gradient(120deg, #167f94, #3756a5);
+      color: white;
+      border: 0;
+    }
+
+    .btn:hover { filter: brightness(1.13); }
+
+    .btn-secondary {
+      background: #24344b;
+      color: var(--text);
+    }
+
+    .btn-danger { background: #7d2839; }
+
+    .panel {
+      margin-top: 22px;
+      padding: 22px;
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      background: rgba(17, 24, 39, .95);
+    }
+
+    .section-heading {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-bottom: 14px;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(
+        auto-fit, minmax(210px, 1fr)
+      );
+      gap: 14px;
+    }
+
+    .field {
+      display: flex;
+      flex-direction: column;
+      gap: 7px;
+      margin-bottom: 13px;
+    }
+
+    input, select {
+      width: 100%;
+      padding: 11px;
+      border: 1px solid #334155;
+      border-radius: 8px;
+      background: #0a1220;
+      color: var(--text);
+      font: inherit;
+    }
+
+    input:focus, select:focus {
+      outline: 2px solid var(--cyan);
+      outline-offset: 1px;
+    }
+
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(
+        auto-fit, minmax(170px, 1fr)
+      );
+      gap: 13px;
+      margin-top: 20px;
+    }
+
+    .stat {
+      padding: 16px;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      background: var(--panel2);
+    }
+
+    .stat-label {
+      color: var(--muted);
+      font-size: 12px;
+      margin-bottom: 7px;
+    }
+
+    .stat-value {
+      font-size: 25px;
+      font-weight: 700;
+      overflow-wrap: anywhere;
+    }
+
+    .stat-sub {
+      color: var(--muted);
+      font-size: 12px;
+      margin-top: 4px;
+    }
+
+    .detail-grid {
+      display: grid;
+      grid-template-columns: repeat(
+        auto-fit, minmax(230px, 1fr)
+      );
+      gap: 12px;
+    }
+
+    .detail-item {
+      background: var(--panel2);
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      padding: 13px;
+      min-width: 0;
+    }
+
+    .detail-label {
+      font-size: 12px;
+      color: var(--muted);
+      margin-bottom: 5px;
+    }
+
+    .detail-value {
+      font-weight: 600;
+      overflow-wrap: anywhere;
+    }
+
+    .token-box {
+      border: 1px solid #2f765f;
+      background: #0b251e;
+      border-radius: 12px;
+      padding: 17px;
+    }
+
+    .token-value {
+      display: block;
+      padding: 13px;
+      margin: 9px 0 13px;
+      background: #061a14;
+      border: 1px solid #245643;
+      border-radius: 8px;
+      color: #b7ffdc;
+      overflow-wrap: anywhere;
+      user-select: all;
+    }
+
+    .notice {
+      padding: 12px 14px;
+      border-radius: 9px;
+      border: 1px solid var(--line);
+      background: var(--panel2);
+      margin: 12px 0;
+    }
+
+    .notice-warning {
+      border-color: #735b2a;
+      color: var(--yellow);
+    }
+
+    .notice-success {
+      border-color: #2f765f;
+      color: var(--green);
+    }
+
+    .notice-error {
+      border-color: #783744;
+      color: var(--red);
+    }
+
+    .badge {
+      display: inline-block;
+      padding: 3px 9px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 600;
+      background: #12372c;
+      color: var(--green);
+      white-space: nowrap;
+    }
+
+    .badge-disabled {
+      background: #3b2029;
+      color: var(--red);
+    }
+
+    .badge-type {
+      background: #172b46;
+      color: #a7c9ff;
+    }
+
+    .table-wrap {
+      overflow-x: auto;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      min-width: 850px;
+    }
+
+    th, td {
+      text-align: left;
+      padding: 13px 10px;
+      border-bottom: 1px solid var(--line);
+      vertical-align: top;
+    }
+
+    th {
+      color: var(--muted);
+      font-size: 11px;
+      letter-spacing: .06em;
+      text-transform: uppercase;
+    }
+
+    tbody tr:hover { background: rgba(69, 217, 238, .035); }
+
+    .actions {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+
+    .actions form { margin: 0; }
+
+    .actions .btn {
+      padding: 7px 10px;
+      font-size: 12px;
+    }
+
+    .empty {
+      text-align: center;
+      padding: 30px 12px;
+      color: var(--muted);
+    }
+
+    details {
+      margin-top: 14px;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      background: var(--panel2);
+    }
+
+    summary {
+      cursor: pointer;
+      padding: 12px 14px;
+      color: var(--cyan);
+    }
+
+    details .details-content { padding: 0 14px 14px; }
+
+    pre {
+      white-space: pre-wrap;
+      overflow-wrap: anywhere;
+      overflow-x: auto;
+      padding: 15px;
+      background: #080f1b;
+      border: 1px solid var(--line);
+      border-radius: 9px;
+      color: #b6e9ff;
+    }
+
+    code {
+      font-family: Consolas, "Courier New", monospace;
+      overflow-wrap: anywhere;
+    }
+
+    .footer-note {
+      margin-bottom: 0;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    @media (max-width: 600px) {
+      main { padding: 20px 12px 40px; }
+      .panel { padding: 15px; }
+      h1 { font-size: 24px; }
+      .stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .stat { padding: 12px; }
+      .stat-value { font-size: 21px; }
+    }
+  </style>
+</head>
+
+<body>
+<main>
+
+  <!-- PAGE HEADER -->
+  <header class="top">
+    <div>
+      <h1>Log Sources &amp; Connectors</h1>
+      <p class="muted">
+        Manage endpoints, authentication credentials and
+        incoming security telemetry.
+      </p>
+    </div>
+
+    <nav class="nav">
+      <a href="/input">Manual Logs</a>
+      <a href="/dashboard">Dashboard</a>
+      <a href="/logout">Logout</a>
+    </nav>
+  </header>
+
+  <!-- FLASK FLASH MESSAGES -->
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% for category, message in messages %}
+      <div class="notice
+        {% if category == 'error' %}notice-error
+        {% elif category == 'success' %}notice-success
+        {% endif %}">
+        {{ message }}
+      </div>
+    {% endfor %}
+  {% endwith %}
+
+  <!-- NEW CONNECTOR TOKEN DETAILS -->
+  {% if new_token %}
+  <section class="panel" id="new-connector">
+
+    <div class="section-heading">
+      <div>
+        <h2>Connector Created Successfully</h2>
+        <p class="muted">
+          Save the credential before leaving this page.
+        </p>
+      </div>
+      <span class="badge">New credential</span>
+    </div>
+
+    <div class="notice notice-warning">
+      The bearer token is a secret credential. It should only
+      be displayed once. Refreshing this page must not create
+      another connector or another token.
+    </div>
+
+    <div class="token-box">
+      <h3>Authentication Details</h3>
+
+      <div class="detail-grid">
+        <div class="detail-item">
+          <div class="detail-label">Source ID</div>
+          <div class="detail-value" id="source-id">
+            {{ new_token.source_id }}
+          </div>
+        </div>
+
+        <div class="detail-item">
+          <div class="detail-label">Source Name</div>
+          <div class="detail-value">
+            {{ new_token.name }}
+          </div>
+        </div>
+
+        <div class="detail-item">
+          <div class="detail-label">Source Type</div>
+          <div class="detail-value">
+            {{ new_token.source_type | default('Not provided', true) }}
+          </div>
+        </div>
+
+        <div class="detail-item">
+          <div class="detail-label">Credential Status</div>
+          <div class="detail-value">
+            <span class="badge">Created</span>
+          </div>
+        </div>
+      </div>
+
+      <p style="margin-top:18px; margin-bottom:4px;">
+        <strong>Bearer Token</strong>
+      </p>
+
+      <code class="token-value" id="token">{{ new_token.token }}</code>
+
+      <div class="actions">
+        <button class="btn" type="button" id="copy-token">
+          Copy Bearer Token
+        </button>
+
+        <button class="btn btn-secondary" type="button"
+                id="copy-source-id">
+          Copy Source ID
+        </button>
+      </div>
+
+      <p class="footer-note" style="margin-top:12px;">
+        Store this credential securely. Do not share it or
+        commit it to source control.
+      </p>
+    </div>
+
+    <h3 style="margin-top:20px;">Ingestion Configuration</h3>
+
+    <div class="detail-grid">
+      <div class="detail-item">
+        <div class="detail-label">HTTP Method</div>
+        <div class="detail-value">POST</div>
+      </div>
+
+      <div class="detail-item">
+        <div class="detail-label">Content Type</div>
+        <div class="detail-value">application/json</div>
+      </div>
+
+      <div class="detail-item">
+        <div class="detail-label">Authentication</div>
+        <div class="detail-value">Bearer Token</div>
+      </div>
+
+      <div class="detail-item">
+        <div class="detail-label">Ingestion Endpoint</div>
+        <div class="detail-value break" id="ingestion-endpoint">
+          {{ request.host_url }}api/ingest/{{ new_token.source_id }}
+        </div>
+      </div>
+    </div>
+
+    <div class="actions" style="margin-top:14px;">
+      <button class="btn btn-secondary" type="button"
+              id="copy-endpoint">
+        Copy Ingestion Endpoint
+      </button>
+    </div>
+  </section>
+  {% endif %}
+
+  <!-- CONNECTOR OVERVIEW -->
+  <section class="stats">
+
+    <div class="stat">
+      <div class="stat-label">Total Connectors</div>
+      <div class="stat-value">{{ sources | length }}</div>
+      <div class="stat-sub">Registered log sources</div>
+    </div>
+
+    <div class="stat">
+      <div class="stat-label">Enabled Connectors</div>
+      <div class="stat-value">
+        {{ sources | selectattr('enabled') | list | length }}
+      </div>
+      <div class="stat-sub">Currently enabled</div>
+    </div>
+
+    <div class="stat">
+      <div class="stat-label">Disabled Connectors</div>
+      <div class="stat-value">
+        {{ sources | rejectattr('enabled') | list | length }}
+      </div>
+      <div class="stat-sub">Currently disabled</div>
+    </div>
+
+    <div class="stat">
+      <div class="stat-label">Events Received</div>
+      <div class="stat-value">
+        {% set ns = namespace(total=0) %}
+        {% for s in sources %}
+          {% set ns.total = ns.total + (s.events_received or 0) %}
+        {% endfor %}
+        {{ ns.total }}
+      </div>
+      <div class="stat-sub">Total across registered sources</div>
+    </div>
+
+  </section>
+
+  <!-- ADD CONNECTOR -->
+  <section class="panel">
+    <h2>Add a Connector</h2>
+
+    <p class="muted">
+      Register a new authorized machine or log source.
+      Each connector receives its own credential.
+    </p>
+
+    <form method="post" action="/connectors/create">
+      <input type="hidden" name="csrf_token"
+             value="{{ csrf_token() }}">
+
+      <div class="grid">
+        <label class="field">
+          Source Name
+          <input
+            type="text"
+            name="name"
+            maxlength="80"
+            required
+            placeholder="e.g. Ubuntu-Workstation">
+        </label>
+
+        <label class="field">
+          Source Type
+          <select name="source_type" required>
+            <option value="linux">Linux</option>
+            <option value="windows">Windows</option>
+            <option value="syslog">Syslog / Network Device</option>
+            <option value="api">Generic JSON API</option>
+          </select>
+        </label>
+      </div>
+
+      <button class="btn" type="submit">
+        Create Connector
+      </button>
+    </form>
+  </section>
+
+  <!-- REGISTERED CONNECTORS -->
+  <section class="panel">
+    <div class="section-heading">
+      <div>
+        <h2>Registered Sources</h2>
+        <p class="muted">
+          Select a connector to inspect its detailed information.
+        </p>
+      </div>
+    </div>
+
+    {% if sources %}
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Source</th>
+            <th>Type</th>
+            <th>Status</th>
+            <th>Last Seen</th>
+            <th>Events</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+
+        <tbody>
+          {% for s in sources %}
+          <tr>
+            <td>
+              <strong>{{ s.name }}</strong>
+              <div class="small muted">ID: {{ s.id }}</div>
+              <div class="small muted">
+                Created:
+                <time class="js-time">{{ s.created_at or '' }}</time>
+              </div>
+            </td>
+
+            <td>
+              <span class="badge badge-type">
+                {{ s.source_type }}
+              </span>
+            </td>
+
+            <td>
+              {% if s.enabled %}
+                <span class="badge">Enabled</span>
+              {% else %}
+                <span class="badge badge-disabled">Disabled</span>
+              {% endif %}
+            </td>
+
+            <td>
+              {% if s.last_seen %}
+                <time class="js-time">{{ s.last_seen }}</time>
+              {% else %}
+                <span class="muted">Never connected</span>
+              {% endif %}
+            </td>
+
+            <td>{{ s.events_received or 0 }}</td>
+
+            <td>
+              <div class="actions">
+
+                <button
+                  class="btn btn-secondary"
+                  type="button"
+                  onclick="toggleDetails('details-{{ s.id }}', this)">
+                  View Details
+                </button>
+
+                <form method="post"
+                      action="/connectors/{{ s.id }}/toggle">
+                  <input type="hidden" name="csrf_token"
+                         value="{{ csrf_token() }}">
+                  <button class="btn" type="submit">
+                    {% if s.enabled %}Disable{% else %}Enable{% endif %}
+                  </button>
+                </form>
+
+                <form method="post"
+                      action="/connectors/{{ s.id }}/revoke"
+                      onsubmit="return confirm(
+                        'Revoke and remove this connector?'
+                      )">
+                  <input type="hidden" name="csrf_token"
+                         value="{{ csrf_token() }}">
+                  <button class="btn btn-danger" type="submit">
+                    Revoke
+                  </button>
+                </form>
+
+              </div>
+            </td>
+          </tr>
+
+          <!-- EXPANDABLE CONNECTOR DETAIL SECTION -->
+          <tr id="details-{{ s.id }}" hidden>
+            <td colspan="6">
+              <div class="detail-grid">
+
+                <div class="detail-item">
+                  <div class="detail-label">Source ID</div>
+                  <div class="detail-value">{{ s.id }}</div>
+                </div>
+
+                <div class="detail-item">
+                  <div class="detail-label">Source Name</div>
+                  <div class="detail-value">{{ s.name }}</div>
+                </div>
+
+                <div class="detail-item">
+                  <div class="detail-label">Source Type</div>
+                  <div class="detail-value">{{ s.source_type }}</div>
+                </div>
+
+                <div class="detail-item">
+                  <div class="detail-label">Connector Status</div>
+                  <div class="detail-value">
+                    {% if s.enabled %}Enabled{% else %}Disabled{% endif %}
+                  </div>
+                </div>
+
+                <div class="detail-item">
+                  <div class="detail-label">Created At</div>
+                  <div class="detail-value">
+                    {% if s.created_at %}
+                      <time class="js-time">{{ s.created_at }}</time>
+                    {% else %}
+                      Unknown
+                    {% endif %}
+                  </div>
+                </div>
+
+                <div class="detail-item">
+                  <div class="detail-label">Last Event Received</div>
+                  <div class="detail-value">
+                    {% if s.last_seen %}
+                      <time class="js-time">{{ s.last_seen }}</time>
+                    {% else %}
+                      Never connected
+                    {% endif %}
+                  </div>
+                </div>
+
+                <div class="detail-item">
+                  <div class="detail-label">Total Events Received</div>
+                  <div class="detail-value">
+                    {{ s.events_received or 0 }}
+                  </div>
+                </div>
+
+                <div class="detail-item">
+                  <div class="detail-label">Ingestion Endpoint</div>
+                  <div class="detail-value break">
+                    {{ request.host_url }}api/ingest/{{ s.id }}
+                  </div>
+                </div>
+
+                <div class="detail-item">
+                  <div class="detail-label">Authentication Method</div>
+                  <div class="detail-value">Bearer Token</div>
+                </div>
+
+                <div class="detail-item">
+                  <div class="detail-label">Token Visibility</div>
+                  <div class="detail-value">
+                    Hidden after initial creation
+                  </div>
+                </div>
+
+              </div>
+
+              <div class="notice notice-warning">
+                Existing bearer tokens cannot be reconstructed from
+                their stored hashes. If a token is lost, implement a
+                secure token rotation action in the backend.
+              </div>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    {% else %}
+    <div class="empty">
+      <h3>No Connectors Found</h3>
+      <p>Create your first connector using the form above.</p>
+    </div>
+    {% endif %}
+  </section>
+
+  <!-- AGENT SETUP -->
+  <section class="panel">
+    <h2>Agent Configuration</h2>
+
+    <p class="muted">
+      Configure the authorized endpoint agent with the connector
+      ID and the bearer token generated during registration.
+    </p>
+
+    <div class="detail-grid">
+      <div class="detail-item">
+        <div class="detail-label">HTTP Method</div>
+        <div class="detail-value">POST</div>
+      </div>
+
+      <div class="detail-item">
+        <div class="detail-label">Content Type</div>
+        <div class="detail-value">application/json</div>
+      </div>
+
+      <div class="detail-item">
+        <div class="detail-label">Authentication Header</div>
+        <div class="detail-value break">
+          Authorization: Bearer YOUR_SOURCE_TOKEN
+        </div>
+      </div>
+    </div>
+
+    <details>
+      <summary>View sample ingestion request</summary>
+      <div class="details-content">
+        <pre><code>POST /api/ingest/SOURCE_ID
+Authorization: Bearer YOUR_SOURCE_TOKEN
+Content-Type: application/json
+
+{
+  "event_type": "failed_login",
+  "message": "Failed password for user test from 203.0.113.10 port 22",
+  "timestamp": "2026-10-14T12:00:00Z",
+  "event_id": "unique-event-id"
+}</code></pre>
+      </div>
+    </details>
+
+    <p class="footer-note">
+      The sample IP is reserved for documentation.
+      Use HTTPS for remote ingestion and authorized sources only.
+    </p>
+  </section>
+
+  <!-- SECURITY INFORMATION -->
+  <section class="panel">
+    <h2>Security &amp; Credential Management</h2>
+
+    <div class="detail-grid">
+      <div class="detail-item">
+        <div class="detail-label">Credential Isolation</div>
+        <div class="detail-value">Separate token per source</div>
+      </div>
+
+      <div class="detail-item">
+        <div class="detail-label">Transport Security</div>
+        <div class="detail-value">HTTPS recommended</div>
+      </div>
+
+      <div class="detail-item">
+        <div class="detail-label">Token Storage</div>
+        <div class="detail-value">Store token hashes server-side</div>
+      </div>
+
+      <div class="detail-item">
+        <div class="detail-label">Revocation</div>
+        <div class="detail-value">Revoke compromised credentials</div>
+      </div>
+    </div>
+
+    <ul class="muted">
+      <li>Never commit bearer tokens to source control.</li>
+      <li>Never expose tokens in query strings or application logs.</li>
+      <li>Protect connector management routes with authentication and CSRF validation.</li>
+      <li>Do not display a token again after its one-time creation view.</li>
+      <li>Restrict ingestion endpoints to authorized sources where practical.</li>
+    </ul>
+  </section>
+
+</main>
+
+<script>
+  // Expand or collapse a connector's detailed information.
+  function toggleDetails(id, button) {
+    const row = document.getElementById(id);
+
+    if (!row) return;
+
+    row.hidden = !row.hidden;
+    button.textContent = row.hidden ? "View Details" : "Hide Details";
+  }
+
+  // Clipboard helper.
+  async function copyText(value, button, originalLabel) {
+    try {
+      await navigator.clipboard.writeText(value);
+      button.textContent = "Copied!";
+      setTimeout(() => {
+        button.textContent = originalLabel;
+      }, 1800);
+    } catch (error) {
+      alert(
+        "Clipboard access failed. Select the value and copy it manually."
+      );
+    }
+  }
+
+  const copyTokenButton = document.getElementById("copy-token");
+
+  if (copyTokenButton) {
+    copyTokenButton.addEventListener("click", () => {
+      const token = document.getElementById("token").textContent.trim();
+      copyText(token, copyTokenButton, "Copy Bearer Token");
+    });
+  }
+
+  const copySourceButton = document.getElementById("copy-source-id");
+
+  if (copySourceButton) {
+    copySourceButton.addEventListener("click", () => {
+      const sourceId = document.getElementById("source-id").textContent.trim();
+      copyText(sourceId, copySourceButton, "Copy Source ID");
+    });
+  }
+
+  const copyEndpointButton = document.getElementById("copy-endpoint");
+
+  if (copyEndpointButton) {
+    copyEndpointButton.addEventListener("click", () => {
+      const endpoint = document.getElementById(
+        "ingestion-endpoint"
+      ).textContent.trim();
+
+      copyText(
+        endpoint,
+        copyEndpointButton,
+        "Copy Ingestion Endpoint"
+      );
+    });
+  }
+
+  // Format ISO timestamps in India Standard Time.
+  document.querySelectorAll("time.js-time").forEach((element) => {
+    const raw = element.textContent.trim();
+
+    if (!raw) {
+      element.textContent = "Unknown";
+      return;
+    }
+
+    const date = new Date(raw);
+
+    if (Number.isNaN(date.getTime())) {
+      // Keep the original backend value if it isn't parseable.
+      return;
+    }
+
+    element.dateTime = date.toISOString();
+
+    element.textContent = new Intl.DateTimeFormat("en-IN", {
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
+      hour12: true,
+      timeZone: "Asia/Kolkata",
+      timeZoneName: "short"
+    }).format(date);
+  });
+</script>
+
+</body>
+</html>
