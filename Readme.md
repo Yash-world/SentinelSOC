@@ -656,6 +656,3 @@ Covers detection rules, IOC extraction, log normalization and both collectors' c
 5. **Pending-token display is in memory.** The one-time token screen uses server memory, so it is not suitable for multi-worker deployments without shared storage.
 6. **Single-node SQLite.** Fine for a simulator or lab; use a server database and a queue for real workloads.
 
-## License
-
-Add your license here.
