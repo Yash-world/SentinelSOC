@@ -13,9 +13,11 @@ SentinelSOC is a lightweight **Security Operations Center (SOC) simulator** buil
 
 Screenshots were taken from a running instance populated with sample events.
 
-| Login | Register |
-| --- | --- |
-| ![Login](docs/screenshots/01-login.png) | ![Register](docs/screenshots/02-register.png) |
+| Login | 
+<img width="1920" height="1080" alt="Screenshot (423)" src="https://github.com/user-attachments/assets/d5d4da62-6bd8-4bf3-b285-2819bacf98e4" />
+
+| Register |
+ | ![Register](docs/screenshots/02-register.png) |
 
 **Add Security Event (`/input`)**
 
