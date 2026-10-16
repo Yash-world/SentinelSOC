@@ -42,7 +42,7 @@ Screenshots were taken from a running instance populated with sample events.
 <img width="1920" height="964" alt="Screenshot (432)" src="https://github.com/user-attachments/assets/f00da125-76b2-428c-b1fc-5f59f2a5d0a9" />
 
 
-**SOC ticket & response submission**
+**SOC ticket & Response Submission**
 
 <img width="747" height="1080" alt="Screenshot (434)" src="https://github.com/user-attachments/assets/28f01173-62f7-452b-b6f9-193555f86b82" />
 
