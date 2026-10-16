@@ -13,21 +13,21 @@ SentinelSOC is a lightweight **Security Operations Center (SOC) simulator** buil
 
 Screenshots were taken from a running instance populated with sample events.
 
-Login  
+**Login**
 <img width="1920" height="1080" alt="Screenshot (423)" src="https://github.com/user-attachments/assets/d5d4da62-6bd8-4bf3-b285-2819bacf98e4" />
 
-Register 
+**Register** 
 <img width="1920" height="1080" alt="Screenshot (424)" src="https://github.com/user-attachments/assets/b9fc3efe-9de8-44cc-8d21-9bdf650bad78" />
 
 
-**Add Security Event (`/input`)**
+**Add Security Event**
 
 <img width="1920" height="1024" alt="Screenshot (425)" src="https://github.com/user-attachments/assets/ee075521-0b22-48b0-b40d-f8159e74bf3f" />
 <img width="1920" height="1080" alt="Screenshot (426)" src="https://github.com/user-attachments/assets/5ef97aa3-236b-444f-9eaa-792aaa271a58" />
 
 
 
-**Dashboard (`/dashboard`)**: summary cards and alert table
+**Dashboard**
 
 <img width="1920" height="696" alt="Screenshot (430)" src="https://github.com/user-attachments/assets/1121f3c2-83dd-4478-8e01-c2c13b28ce50" />
 
@@ -43,13 +43,13 @@ Register
 
 
 **SOC ticket & response submission**
-<img width="747" height="1080" alt="Screenshot (434)" src="https://github.com/user-attachments/assets/28f01173-62f7-452b-b6f9-193555f86b82" />
 
+<img width="747" height="1080" alt="Screenshot (434)" src="https://github.com/user-attachments/assets/28f01173-62f7-452b-b6f9-193555f86b82" />
 
 <img width="1920" height="1080" alt="Screenshot (433)" src="https://github.com/user-attachments/assets/0b164df1-4052-4aeb-a96e-cb15afd63073" />
 
 
-**Log connectors (`/connectors`)**: connector creation with the one-time token, and the connector list
+**Log connectors**
 
 <img width="1920" height="1024" alt="Screenshot (427)" src="https://github.com/user-attachments/assets/eb6dbc3f-6d74-4f30-9770-3fa880059b91" />
 
